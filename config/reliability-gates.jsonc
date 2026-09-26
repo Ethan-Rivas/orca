@@ -20283,28 +20283,13 @@
       "protection": "partial",
       "owner": "desktop-runtime",
       "layer": "relay-service-client-contract",
-      "surfaces": [
-        "AI Vault sidecar startup",
-        "SSH title lookup cancellation"
-      ],
-      "platforms": [
-        "macos",
-        "linux",
-        "windows"
-      ],
-      "providers": [
-        "ssh"
-      ],
-      "coveredPlatforms": [
-        "macos"
-      ],
-      "coveredProviders": [
-        "ssh"
-      ],
+      "surfaces": ["AI Vault sidecar startup", "SSH title lookup cancellation"],
+      "platforms": ["macos", "linux", "windows"],
+      "providers": ["ssh"],
+      "coveredPlatforms": ["macos"],
+      "coveredProviders": ["ssh"],
       "coverageNotes": "Production relay client with synthetic child events and real forced GC. Native remote process execution and live SSH remain untested. Local/daemon PTY, WSL shell selection and mobile terminal stream are unaffected.",
-      "motivatingLinks": [
-        "https://github.com/stablyai/orca/issues/23024"
-      ],
+      "motivatingLinks": ["https://github.com/stablyai/orca/issues/23024"],
       "invariant": "Canceled unsent calls release request payloads before sidecar readiness, disposal releases all pending readiness owners, and live calls still start exactly once through cancellation and startup failures.",
       "oracle": "Hold ready and cancel 1,000 title calls; require zero retained request arrays after GC and one child. Dispose before ready and require uncanceled payload collection and zero timers. Race ready with abort and spawn failure with a second lane; require only live calls delivered and successful results. Preserve existing restart and cancel-ack behavior.",
       "commands": [
