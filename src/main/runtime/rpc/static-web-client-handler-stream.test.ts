@@ -98,9 +98,10 @@ function fileDescriptor(stream: ReadStream): number | null {
 }
 function request(response = fakeResponse()) {
   const handler = createStaticWebClientHandler(root)
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This handler reads only method/url and writes to the provided response surface.
   handler(
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This handler reads only these method/url fields.
     { method: 'GET', url: '/assets/fixture.js' } as IncomingMessage,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements the writable response surface used by this handler.
     response as unknown as ServerResponse
   )
   return response
