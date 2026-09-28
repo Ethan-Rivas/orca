@@ -12,10 +12,6 @@ import {
 } from '../../../../shared/agent-session-resume'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import { findTabForAgentEntry } from './agent-status-pane-key-tab-binding'
-import {
-  resolveTuiAgentLaunchArgs,
-  resolveTuiAgentLaunchEnv
-} from '../../../../shared/tui-agent-launch-defaults'
 
 export function copyLaunchConfig(config: SleepingAgentLaunchConfig): SleepingAgentLaunchConfig {
   return {
@@ -28,25 +24,18 @@ export function copyLaunchConfig(config: SleepingAgentLaunchConfig): SleepingAge
 }
 
 /**
- * Folds main's pinned account into a Claude record's launch config when this renderer's own
- * launch record lacks one: after a restart that record is gone, while main's pinned registry
- * survives, so a later resume must not fall back to the project's current default.
+ * Main's pinned account for a Claude record whose launch config lacks one: after a restart this
+ * renderer's launch record is gone while main's pinned registry survives, so a later resume must
+ * not fall back to the project's current default. Kept apart from the launch config so current
+ * settings are never recorded as the session's original launch options.
  */
-function withMainPinnedClaudeAccount(
-  state: AppState,
+function mainPinnedClaudeAccountFallback(
   entry: AgentStatusEntry,
   launchConfig: SleepingAgentLaunchConfig | undefined
-): SleepingAgentLaunchConfig | undefined {
-  if (entry.agentType !== 'claude' || !entry.claudeAccountId || launchConfig?.claudeAccountId) {
-    return launchConfig
-  }
-  return {
-    ...(launchConfig ?? {
-      agentArgs: resolveTuiAgentLaunchArgs('claude', state.settings?.agentDefaultArgs),
-      agentEnv: resolveTuiAgentLaunchEnv('claude', state.settings?.agentDefaultEnv)
-    }),
-    claudeAccountId: entry.claudeAccountId
-  }
+): string | undefined {
+  return entry.agentType === 'claude' && !launchConfig?.claudeAccountId
+    ? entry.claudeAccountId
+    : undefined
 }
 
 export function sleepingRecordFromEntry(args: {
@@ -70,7 +59,7 @@ export function sleepingRecordFromEntry(args: {
     return null
   }
   const tab = args.tab ?? findTabForAgentEntry(args.state, args.worktreeId, args.entry)
-  const launchConfig = withMainPinnedClaudeAccount(args.state, args.entry, args.launchConfig)
+  const pinnedClaudeAccountId = mainPinnedClaudeAccountFallback(args.entry, args.launchConfig)
   return {
     paneKey: args.entry.paneKey,
     ...(tab ? { tabId: tab.id } : {}),
@@ -88,7 +77,16 @@ export function sleepingRecordFromEntry(args: {
     ...(args.entry.lastAssistantMessage
       ? { lastAssistantMessage: args.entry.lastAssistantMessage }
       : {}),
-    ...(launchConfig ? { launchConfig: copyLaunchConfig(launchConfig) } : {}),
+    ...(args.launchConfig
+      ? {
+          launchConfig: {
+            ...copyLaunchConfig(args.launchConfig),
+            ...(pinnedClaudeAccountId ? { claudeAccountId: pinnedClaudeAccountId } : {})
+          }
+        }
+      : pinnedClaudeAccountId
+        ? { claudeAccountId: pinnedClaudeAccountId }
+        : {}),
     ...agentVerdictFields(args.entry),
     ...(args.origin ? { origin: args.origin } : {})
   }

@@ -73,7 +73,7 @@ function resumedAccount(record: SleepingAgentSessionRecord | undefined): string 
       agentAccounts: { claude: { mode: 'account', accountId: 'acct-project-default' } }
     }),
     worktreeId: 'repo-1::/repo',
-    launchConfigAccountId: record?.launchConfig?.claudeAccountId
+    launchConfigAccountId: record?.launchConfig?.claudeAccountId ?? record?.claudeAccountId
   })
 }
 
@@ -96,7 +96,8 @@ describe('sleeping a workspace after a restart keeps the Claude account', () => 
     const store = restartedStore(claudeEntry({ claudeAccountId: 'acct-b' }))
     store.getState().captureSleepingAgentSessionsByWorktree('wt-1')
     const record = store.getState().sleepingAgentSessionsByPaneKey[PANE_KEY]
-    expect(record?.launchConfig).toMatchObject({ claudeAccountId: 'acct-b' })
+    expect(record?.launchConfig).toBeUndefined()
+    expect(record?.claudeAccountId).toBe('acct-b')
     expect(resumedAccount(record)).toBe('acct-b')
   })
 

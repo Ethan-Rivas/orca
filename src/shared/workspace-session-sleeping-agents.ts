@@ -110,6 +110,7 @@ const sleepingAgentSessionRecordSchema = z
     mainAgent: z.unknown().transform(normalizeMainAgentStatusField).optional(),
     connectionId: z.string().nullable().optional(),
     launchConfig: sleepingAgentLaunchConfigSchema.optional(),
+    claudeAccountId: launchConfigClaudeAccountIdSchema,
     origin: z.enum(['worktree-sleep', 'quit', 'live']).optional(),
     restoreOnTabOpenOnly: z.boolean().optional()
   })
