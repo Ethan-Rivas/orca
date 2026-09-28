@@ -174,10 +174,10 @@ export class ClaudeRuntimeAuthPinnedLaunch extends ClaudeRuntimeAuthPreparationS
     account: ClaudeManagedAccount,
     configDir: string,
     options: { strict: boolean }
-  ): Promise<void> {
+  ): Promise<'reconciled' | 'deferred'> {
     const seededHash = readPinnedClaudeSeedMarker(configDir)
     if (seededHash === null) {
-      return
+      return 'reconciled'
     }
     let scopedCredentialsJson: string | null
     try {
@@ -190,7 +190,7 @@ export class ClaudeRuntimeAuthPinnedLaunch extends ClaudeRuntimeAuthPreparationS
         )
       }
       console.warn('[claude-runtime-auth] Deferring pinned Claude read-back:', error)
-      return
+      return 'deferred'
     }
     const managedCredentialsJson = await this.readManagedCredentials(account)
     if (
@@ -218,6 +218,7 @@ export class ClaudeRuntimeAuthPinnedLaunch extends ClaudeRuntimeAuthPreparationS
       }
       console.warn('[claude-runtime-auth] Could not remove a pinned Claude Keychain copy:', error)
     }
+    return 'reconciled'
   }
 
   private readPinnedConfigOauthAccount(configDir: string): unknown {

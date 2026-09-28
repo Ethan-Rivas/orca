@@ -166,8 +166,17 @@ export class ClaudeRuntimeAuthSync extends ClaudeRuntimeAuthPinnedLaunch {
       // Why: a pinned session that ended without a read-back (crash) may hold the only unspent
       // refresh token; take it back before materializing this account for the host.
       const ownedPath = await this.getOwnedManagedAuthPath(activeAccount)
-      if (ownedPath) {
-        await this.reconcilePinnedKeychainCredentials(activeAccount, ownedPath, { strict: false })
+      // Why: a deferred read-back leaves the managed token possibly spent; copying it to the host
+      // would log out the next active-account launch, so leave the host untouched until it succeeds.
+      if (
+        ownedPath &&
+        (await this.reconcilePinnedKeychainCredentials(activeAccount, ownedPath, {
+          strict: false
+        })) === 'deferred'
+      ) {
+        throw new Error(
+          'Could not read the Keychain item of the last Claude session pinned to this account. Unlock the Keychain and retry.'
+        )
       }
     }
     let credentialsJson = await this.readManagedCredentials(activeAccount)

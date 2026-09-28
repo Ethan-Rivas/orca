@@ -349,6 +349,20 @@ describe('ClaudeRuntimeAuthService pinned --account launches', () => {
     expect(keychain.scoped.has(fixture.pinnedDir)).toBe(false)
   })
 
+  it('leaves the host auth untouched when a crashed pinned copy cannot be read back', async () => {
+    const fixture = await setUpTwoAccounts()
+    await fixture.service.prepareForClaudeLaunch({ runtime: 'host' }, { accountId: 'acct-b' })
+    fixture.registry._internals.reset()
+    keychain.throwScopedRead = true
+    const runtimeBefore = readFileSync(fixture.runtimeCredentialsPath, 'utf-8')
+
+    fixture.store.updateSettings({ activeClaudeManagedAccountId: 'acct-b' })
+    await expect(fixture.service.syncForCurrentSelection()).rejects.toThrow(/Unlock the Keychain/)
+
+    expect(readFileSync(fixture.runtimeCredentialsPath, 'utf-8')).toBe(runtimeBefore)
+    expect(existsSync(markerPath(fixture))).toBe(true)
+  })
+
   it('refuses a pinned launch while the account is being switched to or removed', async () => {
     const fixture = await setUpTwoAccounts()
     const endMutation = fixture.registry.beginClaudeAccountHostMutation('acct-b')
