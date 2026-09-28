@@ -4,6 +4,10 @@ import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../../shared/claude/project-claude-account-preference'
 import { resolveProjectClaudeAccount } from '../../../../main/claude-accounts/project-claude-account-resolution'
 import { createTestStore, makeTab } from './store-test-helpers'
+import {
+  recoveryRecordMatches,
+  sleepingRecordsEquivalentIgnoringCaptureTime
+} from './agent-status-recovery-equivalence'
 
 const NOW = 1_800_000_000_000
 const PANE_KEY = 'tab-1:leaf-1'
@@ -105,5 +109,16 @@ describe('sleeping a workspace after a restart keeps the Claude account', () => 
     const store = restartedStore(claudeEntry({ state: 'working', claudeAccountId: 'acct-b' }))
     store.getState().captureAllSleepingAgentSessions('quit')
     expect(resumedAccount(store.getState().sleepingAgentSessionsByPaneKey[PANE_KEY])).toBe('acct-b')
+  })
+})
+
+describe('record-level Claude account in capture equivalence', () => {
+  it('treats records that differ only in their pinned account as different', () => {
+    const { launchConfig: _omit, ...base } = priorRecord('unused')
+    const pinnedA = { ...base, claudeAccountId: 'acct-a' }
+    const pinnedB = { ...base, claudeAccountId: 'acct-b' }
+    expect(sleepingRecordsEquivalentIgnoringCaptureTime(pinnedA, pinnedB)).toBe(false)
+    expect(recoveryRecordMatches(pinnedA, pinnedB)).toBe(false)
+    expect(recoveryRecordMatches(pinnedA, { ...pinnedA })).toBe(true)
   })
 })
