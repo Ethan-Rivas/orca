@@ -3202,6 +3202,7 @@
           },
           "TerminalContextMenu": {
             "b4cdd9314e": "Clear Screen",
+            "resetTerminal": "Reset Terminal",
             "8c17d6786d": "Close Pane",
             "copyTerminalId": "Copy Terminal ID",
             "2cf85a6a55": "Copy Pane ID",
@@ -17812,6 +17813,7 @@
           "subtitle": "The transcript could not be read. Toggle back to the terminal to keep working.",
           "retryingSubtitle": "The transcript could not be read. Orca keeps trying to load it."
         },
+        "reconnecting": "Reconnecting to this chat…",
         "pairHost": "Pair a host to view agent chat history.",
         "notAgent": {
           "title": "No conversation here",
@@ -17882,7 +17884,9 @@
         "startedN": "Kicked off {{value0}} subagents",
         "ranOne": "Ran 1 subagent",
         "ranN": "Ran {{value0}} subagents",
-        "tokens": "{{value0}} tokens"
+        "tokens": "{{value0}} tokens",
+        "unnamed": "Subagent",
+        "writtenBy": "Written by subagent {{value0}}"
       },
       "conversationCommand": {
         "pendingWork": "Wait for pending work and messages to finish before using this command.",
