@@ -3078,7 +3078,9 @@
             "42b283ecfc": "ホストが保存されたセッションを確認できなかったため、Orca はこのターミナルを安全に再接続できませんでした。 Orca は保存されたセッションを変更せずに残しました。今すぐ再接続を試みるには、「再試行」をクリックします。それでも再接続できない場合は、新規ターミナルを開きます。",
             "e16012e31e": "このセッションを所有していたターミナルデーモンが終了したため、セッションとそのスクロールバックを回復できませんでした。続行するには、新規ターミナルを開いてください。",
             "sessionUnavailable": "Orca はホスト上のこのペインのターミナルセッションに再接続できませんでした。続行するには、新規ターミナルを開いてください。",
-            "sourceRestoring": "このターミナルを再接続しています — その出力が再確立されています。セッションはまだ実行中です。"
+            "sourceRestoring": "このターミナルを再接続しています — その出力が再確立されています。セッションはまだ実行中です。",
+            "ptyAllocationLimit": "システムはこれ以上 pty デバイスを割り当てられません。Orca または他のプログラムで使っていないターミナルをいくつか閉じてから、もう一度お試しください。",
+            "terminalProcessLimit": "システムはこれ以上ターミナルプロセスを起動できません。使っていないターミナルを閉じるか、不要なプロセスを終了してから、もう一度お試しください。"
           },
           "ClaudePinnedLaunch": {
             "hostSessions": "この Claude アカウントは、アクティブなアカウントだったときに開始したターミナルでまだ使用されています。それらを閉じるか、今回はアクティブなアカウントで開始してください。",
@@ -3263,6 +3265,9 @@
           "TerminalQuickCommandsSubmenu": {
             "3ccc7981bb": "ホストが利用不可",
             "54f29b7c0d": "ホストを読み込み中…"
+          },
+          "TerminalRestoringPlaceholder": {
+            "restoring": "ターミナルを復元中…"
           }
         }
       },
@@ -3691,7 +3696,8 @@
             "floatingTerminalNewActivity": "{{label}}、新規アクティビティ",
             "codexSignInSuccess": "Codex にサインインしました",
             "codexSignInError": "Codex のサインインに失敗しました。もう一度お試しください。",
-            "cursorUsageMenu": "Cursor の使用状況"
+            "cursorUsageMenu": "Cursor の使用状況",
+            "hiddenUsageProviders": "ほかに: {{value0}}"
           },
           "StatusBarUsageEmptyCta": {
             "828c764a79": "アカウントを接続する",
@@ -14899,6 +14905,7 @@
           "f1aa04b5cf": "このファイル",
           "8b87612461": "すべての未送信のメモ"
         },
+        "diffCommentSaveFailed": "コメントの保存に失敗しました",
         "DiffSectionBody": {
           "35d6afb5be": "バイナリファイルが変更されました",
           "cef4cf0ff5": "再試行",
@@ -15055,7 +15062,7 @@
         },
         "MarkdownPreview": {
           "e4683f70c4": "キャンセル",
-          "d737791433": "AI に関するメモを追加",
+          "d737791433": "AI 向けのメモを追加",
           "b1bfc04034": "選択したテキスト",
           "f37b98999e": "このメモ",
           "2b2b31382c": "フロントマター",
@@ -15542,7 +15549,10 @@
             "2b3ce6d394": "キャンセル",
             "e05063cfc1": "{{value0}} 行目",
             "c845170b3b": "行 {{value0}}-{{value1}}",
-            "commentTooLarge": "コメントが大きすぎるため安全に送信できません。"
+            "commentTooLarge": "コメントが大きすぎるため安全に送信できません。",
+            "f6c449191e": "AI 向けのメモを追加",
+            "5fa4bfebaa": "メモを追加",
+            "5e9b3d0c2e": "追加中…"
           },
           "useDiffCommentDecorator": {
             "995fa28b50": "このメモ"
@@ -17384,6 +17394,56 @@
       }
     },
     "native-chat": {
+      "writeNotice": {
+        "notDoneReadHistory": "このチャットの履歴を読み込めませんでした。",
+        "notDoneSend": "メッセージは送信されませんでした。",
+        "tryAgainComposerSend": "もう一度送信してください。",
+        "notDoneStop": "Agent は停止されませんでした。",
+        "notDoneStopTask": "バックグラウンドタスクは停止されませんでした。",
+        "notDoneStopTasks": "バックグラウンドタスクは停止されませんでした。",
+        "notDoneAnswer": "回答は送信されませんでした。",
+        "notDoneOption": "設定は変更されませんでした。",
+        "notDoneCommand": "コマンドは実行されませんでした。",
+        "notDoneGoal": "目標は変更されませんでした。",
+        "restartFailed": "Agent を再起動できませんでした。",
+        "capacity": "Orca が過去 1 日に受け取ったリクエストが多すぎます。",
+        "outcomeUnknown": "Orca は何が起きたかを確認できませんでした。チャットを確認してください。",
+        "questionChanged": "この質問はすでに回答済みか、変更されています。",
+        "historyUnreadable": "Orca はこのチャットの保存済み履歴を読み取れませんでした。",
+        "historyUnusable": "このチャットを読み込めません。",
+        "historyUnavailable": "Orca は現在このチャットの履歴を開けませんでした。",
+        "unsupported": "このチャットを実行している Orca はこの操作に対応していません。Orca を更新してから、もう一度お試しください。",
+        "unreachable": "Orca は Agent に接続できませんでした。",
+        "recordFailed": "Orca はこのチャットの履歴に記録できませんでした。",
+        "conversationCleared": "この会話はクリアされました。",
+        "openCurrentConversation": "続けるには、現在の会話を開いてください。",
+        "clearUnfinished": "前回の /clear は完了しませんでした。",
+        "commandRunning": "/compact または /clear がまだ実行中です。",
+        "waitForCommand": "/compact または /clear が終わるまでお待ちください。",
+        "agentStarting": "Agent はまだ起動中です。",
+        "waitForStart": "Agent の起動が終わるまでお待ちください。",
+        "turnActive": "Agent はまだ応答中です。",
+        "waitForTurn": "Agent の応答が終わるまで待つか、Agent を停止してください。",
+        "promptPending": "Agent は質問または承認への回答を待っています。",
+        "answerFirst": "先に質問または承認に回答してください。",
+        "backgroundTasksRunning": "バックグラウンドタスクがまだ実行中です。",
+        "waitForBackgroundTasks": "バックグラウンドタスクが終わるまでお待ちください。",
+        "messagesUnsettled": "以前に送信したメッセージがまだ確認されていません。",
+        "settleEarlierMessage": "以前のメッセージが届くまで待つか、再試行してください。",
+        "optionRejected": "Agent はこの設定を受け入れませんでした。",
+        "goalsUnsupported": "この Agent は目標に対応していません。",
+        "agentRefused": "Agent がこれを拒否しました。",
+        "ownerUnproven": "Orca は、このチャットの以前の Agent が停止したことをまだ確認できていません。",
+        "reopenChat": "もう一度確認するには、チャットを開き直してください。",
+        "terminalAgentHoldsChat": "このチャットはまだターミナルの Agent で開かれています。",
+        "quitTerminalAgent": "ここでチャットを続けるには、その Agent を終了してください。",
+        "hostReconciling": "Orca は再起動後、このチャットをまだ確認しています。",
+        "waitMoment": "しばらくお待ちください。",
+        "recordUnreadable": "Orca はこのチャットの保存済みの状態を読み取れませんでした。",
+        "chatNotFound": "このチャットを実行している Orca には、このチャットの記録がありません。",
+        "startNewChat": "続けるには、新しいチャットを開始してください。",
+        "tryAgain": "もう一度お試しください。"
+      },
       "composer": {
         "imageUnsupported": "この Agent では画像の貼り付けはサポートされていません。",
         "send": "送信",
@@ -17524,8 +17584,8 @@
         "responding": "Agent が応答中です",
         "working": "処理中…",
         "thinking": "考え",
-        "workingFor": "{{value0}} で働いています",
-        "workedFor": "{{value0}}で働いていました",
+        "workingFor": "{{value0}} 処理中",
+        "workedFor": "{{value0}} で完了",
         "toggleDetails": "ターンの詳細を切り替えます"
       },
       "jumpToLatest": "最新にジャンプ",
@@ -17540,7 +17600,8 @@
         },
         "error": {
           "title": "会話を読み込めませんでした",
-          "subtitle": "トランスクリプトを読み取ることができませんでした。作業を続けるには、ターミナルに切り替えてください。"
+          "subtitle": "トランスクリプトを読み取ることができませんでした。作業を続けるには、ターミナルに切り替えてください。",
+          "retryingSubtitle": "トランスクリプトを読み取ることができませんでした。Orca は読み込みを再試行し続けます。"
         },
         "pairHost": "ホストをペアリングして、Agent のチャット履歴を表示します。",
         "notAgent": {
@@ -17908,7 +17969,7 @@
           "appliedFilters": "適用されたフィルター",
           "removeFilter": "フィルター {{value0}} を削除します",
           "chip": {
-            "idleDays": "アイドル {{value0}}d+",
+            "idleDays": "アイドル {{value0}}日以上",
             "neverVisited": "訪れたことがない",
             "minSize": "少なくとも {{value0}} MB",
             "maxSize": "最大 {{value0}} MB",
@@ -18031,9 +18092,9 @@
     "cmd-j": {
       "paletteSessionAge": {
         "minutes": "{{value0}}分",
-        "hours": "{{value0}}h",
-        "days": "{{value0}}d",
-        "underOneMinute": "<1m"
+        "hours": "{{value0}}時間",
+        "days": "{{value0}}日",
+        "underOneMinute": "<1分"
       }
     },
     "settings": {
@@ -18279,6 +18340,7 @@
       "needsInput": "入力待ち",
       "working": "処理中",
       "stopped": "停止",
+      "failed": "失敗",
       "finished": "完了"
     }
   },

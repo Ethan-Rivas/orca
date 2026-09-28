@@ -4,6 +4,10 @@ import { resolveClientEnvironmentFooter } from '@/lib/client-environment-info'
 import { Button } from '@/components/ui/button'
 import { hasClientEnvironmentFooter } from '../../../../shared/client-environment-info'
 import { describeClaudePinnedLaunchError } from './claude-pinned-launch-error-copy'
+import {
+  localizeTerminalSpawnHints,
+  withoutTerminalSpawnIssueRequest
+} from './terminal-spawn-error-display'
 
 const SSH_PREFIX = 'SSH connection is not active'
 // Produced by pty-connection.ts reportError() when a PTY reattach can't reach its SSH host.
@@ -120,7 +124,7 @@ export function humanizeTerminalError(error: string): string {
   if (pinnedLaunch) {
     return pinnedLaunch.message
   }
-  let humanized = error
+  let humanized = localizeTerminalSpawnHints(error)
   if (humanized.includes(PANE_OWNER_UNVERIFIED_MARKER)) {
     const explanation = isPaneOwnerUnverifiedError(humanized)
       ? translate(
@@ -196,7 +200,11 @@ export function TerminalErrorToast({
   // Restart cannot recover a session after its owning daemon exits.
   const showIssueLink =
     !ssh && !paneOwnerUnverified && !showDaemonRestart && !isExplainedTerminalError(error)
-  const displayError = humanizeTerminalError(error)
+  const humanizedError = humanizeTerminalError(error)
+  // Why: the toast appends its own linked request, so the host's plain-text one would repeat it.
+  const displayError = showIssueLink
+    ? withoutTerminalSpawnIssueRequest(humanizedError)
+    : humanizedError
   const tint = paneOwnerUnverified
     ? null
     : ssh
