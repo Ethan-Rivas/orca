@@ -1084,6 +1084,7 @@
     },
     "components": {
       "ClaudeAccountPromptDialog": {
+        "accountsUnavailable": "无法加载你的 Claude 账户，因此未启动 Claude。请重试，或在“设置 → 仓库”中为此项目选择账户。",
         "title": "选择 Claude 账户",
         "description": "选择要在 {{value0}} 中启动的 Claude 账户。",
         "accountLabel": "账户",

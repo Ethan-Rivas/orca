@@ -3,13 +3,22 @@ import type { Repo } from '../../../../shared/repo-types'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import type { ClaudeManagedAccountSummary } from '../../../../shared/managed-account-types'
 import { useAppStore } from '@/store'
+import { toast } from 'sonner'
 import {
+  chooseClaudeLaunchAccountForWorkspace,
   launchWithClaudeAccountChoice,
   shouldPromptForClaudeAccount
 } from './choose-claude-launch-account'
 import { claudeAccountPinningUnsupportedReasonInState } from '../settings/repository-claude-account'
 
 vi.mock('@/lib/renderer-app-platform', () => ({ getRendererAppPlatform: () => 'win32' }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('@/runtime/runtime-provider-accounts-client', () => ({
+  fetchProviderAccountsSnapshot: vi.fn(async () => {
+    throw new Error('offline')
+  }),
+  hasRemoteProviderAccountOwner: () => false
+}))
 
 function account(id: string): ClaudeManagedAccountSummary {
   return {
@@ -111,5 +120,23 @@ describe('WSL projects', () => {
     launchWithClaudeAccountChoice('claude', { repoId: 'repo-1' }, launch)
 
     expect(launch).toHaveBeenCalledWith(undefined, false)
+  })
+})
+
+describe('ask projects when the account list cannot load', () => {
+  const initialState = useAppStore.getInitialState()
+  afterEach(() => useAppStore.setState(initialState, true))
+
+  it('cancels the launch and explains why instead of starting on the active account', async () => {
+    useAppStore.setState({
+      repos: [repo({ agentAccounts: { claude: { mode: 'ask' } } })],
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: only the prompt toggle is read before the account fetch.
+      settings: { askClaudeAccountPerProject: false } as GlobalSettings
+    })
+
+    await expect(chooseClaudeLaunchAccountForWorkspace({ repoId: 'repo-1' })).resolves.toEqual({
+      kind: 'cancelled'
+    })
+    expect(toast.error).toHaveBeenCalledTimes(1)
   })
 })

@@ -17260,6 +17260,7 @@
         "typeHtml": "HTML"
       },
       "ClaudeAccountPromptDialog": {
+        "accountsUnavailable": "Impossible de charger vos comptes Claude, Claude n'a donc pas été lancé. Réessayez ou choisissez le compte de ce projet dans Paramètres → Dépôt.",
         "title": "Choisir un compte Claude",
         "description": "Choisissez le compte Claude à utiliser dans {{value0}}.",
         "accountLabel": "Compte",

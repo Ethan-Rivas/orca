@@ -1084,6 +1084,7 @@
     },
     "components": {
       "ClaudeAccountPromptDialog": {
+        "accountsUnavailable": "Claude アカウントを読み込めなかったため、Claude を起動しませんでした。もう一度お試しいただくか、[設定] → [リポジトリ] でこのプロジェクトのアカウントを選択してください。",
         "title": "Claude アカウントを選択",
         "description": "{{value0}} で開始する Claude アカウントを選択してください。",
         "accountLabel": "アカウント",

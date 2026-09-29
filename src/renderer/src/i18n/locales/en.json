@@ -1204,6 +1204,7 @@
     },
     "components": {
       "ClaudeAccountPromptDialog": {
+        "accountsUnavailable": "Couldn't load your Claude accounts, so Claude wasn't started. Try again, or choose this project's account in Settings → Repository.",
         "title": "Choose a Claude account",
         "description": "Pick the Claude account to start in {{value0}}.",
         "accountLabel": "Account",

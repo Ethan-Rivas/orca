@@ -876,6 +876,7 @@
     },
     "components": {
       "ClaudeAccountPromptDialog": {
+        "accountsUnavailable": "No se pudieron cargar tus cuentas de Claude, así que Claude no se inició. Vuelve a intentarlo o elige la cuenta de este proyecto en Ajustes → Repositorio.",
         "title": "Elige una cuenta de Claude",
         "description": "Elige la cuenta de Claude con la que empezar en {{value0}}.",
         "accountLabel": "Cuenta",

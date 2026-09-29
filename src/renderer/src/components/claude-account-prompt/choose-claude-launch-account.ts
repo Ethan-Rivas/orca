@@ -4,6 +4,8 @@ import type { ClaudeManagedAccountSummary } from '../../../../shared/managed-acc
 import type { RepoAgentAccounts } from '../../../../shared/claude/project-claude-account-preference'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { getRepoExecutionHostId } from '../../../../shared/execution-host'
+import { toast } from 'sonner'
+import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { findLaunchRepo, resolveLaunchClaudeAccountId } from '@/lib/claude-launch-account'
 import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
@@ -93,6 +95,17 @@ export async function chooseClaudeLaunchAccount(input: {
   }
 }
 
+// Why: this project asks for an account, so starting on the active one unasked could bill the wrong account.
+function cancelForUnavailableAccounts(): ClaudeLaunchAccountChoice {
+  toast.error(
+    translate(
+      'auto.components.ClaudeAccountPromptDialog.accountsUnavailable',
+      "Couldn't load your Claude accounts, so Claude wasn't started. Try again, or choose this project's account in Settings → Repository."
+    )
+  )
+  return { kind: 'cancelled' }
+}
+
 export async function chooseClaudeLaunchAccountForWorkspace(workspace: {
   repoId?: string
   worktreeId?: string
@@ -108,9 +121,8 @@ export async function chooseClaudeLaunchAccountForWorkspace(workspace: {
   let activeAccountId: string | null
   try {
     const snapshot = await fetchProviderAccountsSnapshot(routedSettings)
-    // Why: fail open to the unprompted launch; main still enforces any saved account.
     if (snapshot.failedProviders?.includes('claude')) {
-      return { kind: 'default' }
+      return cancelForUnavailableAccounts()
     }
     const visibility = {
       remoteOwner: hasRemoteProviderAccountOwner(routedSettings),
@@ -122,7 +134,7 @@ export async function chooseClaudeLaunchAccountForWorkspace(workspace: {
     activeAccountId =
       snapshot.claude.activeAccountIdsByRuntime?.host ?? snapshot.claude.activeAccountId
   } catch {
-    return { kind: 'default' }
+    return cancelForUnavailableAccounts()
   }
   const hostId = getRepoExecutionHostId(repo)
   return chooseClaudeLaunchAccount({
