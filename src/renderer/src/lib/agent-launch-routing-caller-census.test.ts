@@ -21,6 +21,7 @@ const LAUNCH_AGENT_IN_NEW_TAB_CALLERS = [
   // in place, rather than hand-rolling the terminal arm, same rationale as the floating-window entry above.
   'src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx',
   'src/renderer/src/components/use-terminal-create-actions.ts',
+  'src/renderer/src/lib/empty-workspace-default-agent-chat.ts',
   'src/renderer/src/lib/fix-checks-agent-launch.ts',
   'src/renderer/src/lib/launch-agent-session-continuation.ts',
   'src/renderer/src/lib/run-quick-command-in-new-tab.ts'

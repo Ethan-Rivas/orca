@@ -100,14 +100,14 @@ export function TerminalPaneSurface({
     searchStateRef,
     searchInputRef,
     sessionRestoredBannerPaneIds,
-    sessionStateSaveFailureOpen,
+    sessionStateSaveFailureMessage,
     setAgentSessionContinuation,
     setAgentSessionFork,
     setContainerRef,
     setQuickCommandEditorOpen,
     setRenameValue,
     setSearchOpen,
-    setSessionStateSaveFailureOpen,
+    setSessionStateSaveFailureMessage,
     showSplitButton,
     showSshReconnectOverlay,
     splitTerminalPaneFromHeader,
@@ -235,8 +235,9 @@ export function TerminalPaneSurface({
       <DaemonActionDialog api={daemonActions} />
       {isActive && (
         <TerminalSessionStateSaveFailureDialog
-          open={sessionStateSaveFailureOpen}
-          onDismiss={() => setSessionStateSaveFailureOpen(false)}
+          open={sessionStateSaveFailureMessage !== null}
+          failureMessage={sessionStateSaveFailureMessage ?? ''}
+          onDismiss={() => setSessionStateSaveFailureMessage(null)}
           onOpenSpaceAnalyzer={openDiskSpaceAnalyzer}
         />
       )}

@@ -70,6 +70,7 @@ describe('agent launch caller profiles', () => {
     // Why: this is the coupling a move to an async launch RPC threatens most directly — these
     // call sites cannot tolerate a tab id that only exists after the launch settles.
     expect(readers.sort()).toEqual([
+      'empty-workspace-default-chat',
       'fix-checks',
       'floating-default-agent',
       'quick-command',
