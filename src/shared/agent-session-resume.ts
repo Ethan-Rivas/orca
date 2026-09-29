@@ -5,6 +5,7 @@ import type { TuiAgent } from './tui-agent'
 
 export const RESUMABLE_TUI_AGENTS = [
   'claude',
+  'codebuddy',
   'codex',
   'qoder',
   'gemini',
@@ -200,6 +201,7 @@ export function extractAgentProviderSession(
     // since recent Claude Code names the transcript file with a UUID that differs
     // from the hook session_id (so the id-based glob no longer finds it).
     case 'qoder':
+    case 'codebuddy':
     case 'claude':
     case 'codex': {
       const id = readSessionId(payload, ['session_id'])
@@ -281,6 +283,8 @@ export function getAgentResumeArgv(
 ): string[] | null {
   const id = providerSession.id
   switch (agent) {
+    case 'codebuddy':
+      return providerSession.key === 'session_id' ? ['codebuddy', '--resume', id] : null
     case 'claude':
       return providerSession.key === 'session_id' ? ['claude', '--resume', id] : null
     case 'codex':

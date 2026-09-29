@@ -12,7 +12,6 @@ import type { PreparationRearmHolder } from '../worktree-create-preparation'
 import { prepareRuntimeLocalWorktreeSetup } from './runtime-local-worktree-setup'
 import { invalidateAuthorizedRootsCache } from '../ipc/filesystem-auth'
 import { startRuntimeLocalWorktreeTerminals } from './runtime-local-worktree-terminal-startup'
-import { resolveWorktreeStartupClaudeAccount } from './runtime-worktree-startup-claude-account'
 
 export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
   async createManagedWorktree(
@@ -69,7 +68,12 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         : null
     const draftStartup =
       !args.startup && !agentStartup && args.startupDraft
-        ? await this.buildStartupForDraft(repo, args.startupDraft, requestedAgent)
+        ? await this.buildStartupForDraft(
+            repo,
+            args.startupDraft,
+            requestedAgent,
+            args.startupLaunchSource
+          )
         : null
     const effectiveStartup = args.startup ?? agentStartup?.startup ?? draftStartup?.startup
     const effectiveStartupFollowup = agentStartup?.followup
@@ -87,12 +91,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
     // `null` on a `runtime:` host is deliberate: its nested target is addressable only inside that
     // environment, so the trust write must not go to a same-named target in this client's table.
     const sshConnectionId = createRoute.kind === 'ssh' ? createRoute.connectionId : null
-    const startupClaudeAccountId = resolveWorktreeStartupClaudeAccount({
-      request: args,
-      createRouteKind: createRoute.kind,
-      canSpawn: Boolean(this.ptyController?.spawn),
-      listClaudeAccounts: () => this.getAccountsSnapshot().claude
-    })
+    const startupClaudeAccountId = this.resolveStartupClaudeAccount(args, createRoute.kind)
     if (isFolderRepo(repo)) {
       // A folder workspace is a registration, not a filesystem create, so it is host-agnostic —
       // except for the agent trust write, which must land on the host that will run the agent.

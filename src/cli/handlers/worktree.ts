@@ -248,6 +248,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
         ? {
             startupAgent,
             startupPrompt: getPresentStringFlag(flags, 'prompt', { allowEmpty: true }) ?? '',
+            launchSource: 'cli',
             ...(claudeAccount ? { startupClaudeAccount: claudeAccount } : {})
           }
         : {})
