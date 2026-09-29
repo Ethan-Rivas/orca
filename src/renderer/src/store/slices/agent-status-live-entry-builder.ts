@@ -114,6 +114,11 @@ export function buildAgentStatusLiveEntry(
       : existing && existing.state === payload.state
         ? existing.stateStartedAt
         : updatedAt)
+  // Why: a writer with no turn clock (an OSC repaint) keeps the host's stamp only within one state;
+  // a state change it cannot date must not inherit another turn's start.
+  const turnStartedAt =
+    timing?.turnStartedAt ??
+    (existing && existing.state === payload.state ? existing.turnStartedAt : undefined)
   if (
     existing &&
     shouldSuppressInheritedTerminalStatus({
@@ -206,6 +211,7 @@ export function buildAgentStatusLiveEntry(
     ...(metadata?.structuredHostOwned === true ? { structuredHostOwned: true as const } : {}),
     stateStartedAt,
     stateObservedAt,
+    ...(turnStartedAt !== undefined ? { turnStartedAt } : {}),
     agentType: identity.agentType,
     model:
       payload.model ?? (existing?.agentType === identity.agentType ? existing.model : undefined),

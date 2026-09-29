@@ -88,13 +88,9 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
     // an `executionHostId: 'ssh:*'`-only repo down the local path, which runs `git worktree add` on
     // the client against a remote path.
     const createRoute = resolveWorktreeCreateRoute(repo)
-    // `null` on a `runtime:` host is deliberate: its nested target is addressable only inside that
-    // environment, so the trust write must not go to a same-named target in this client's table.
-    const sshConnectionId = createRoute.kind === 'ssh' ? createRoute.connectionId : null
     const startupClaudeAccountId = this.resolveStartupClaudeAccount(args, createRoute.kind)
     if (isFolderRepo(repo)) {
-      // A folder workspace is a registration, not a filesystem create, so it is host-agnostic —
-      // except for the agent trust write, which must land on the host that will run the agent.
+      // A folder workspace is a registration, not a filesystem create, so it is host-agnostic.
       return createRuntimeFolderWorktree({
         request: args,
         startupClaudeAccountId,
@@ -107,8 +103,6 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
           store: this.store,
           ptySpawnAvailable: Boolean(this.ptyController?.spawn),
           createTerminal: (selector, options) => this.createTerminal(selector, options),
-          markTrusted: (agent, path) =>
-            this.markWorkspaceTrustedForAgent(agent, sshConnectionId, path),
           pasteDraft: (handle, draft) => this.pasteStartupDraftWhenReady(handle, draft),
           sendFollowup: (handle, followup) => this.sendStartupFollowupWhenReady(handle, followup),
           invalidateResolvedWorktrees: () => this.invalidateResolvedWorktreeCache(),
@@ -246,7 +240,6 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       warning,
       ports: {
         canSpawn: Boolean(this.ptyController?.spawn),
-        markTrusted: (agent, path) => this.markLocalWorkspaceTrustedForAgent(agent, path),
         createTerminal: (selector, options) => this.createTerminal(selector, options),
         pasteDraft: (handle, draft) => this.pasteStartupDraftWhenReady(handle, draft),
         sendFollowup: (handle, followup) => this.sendStartupFollowupWhenReady(handle, followup),
