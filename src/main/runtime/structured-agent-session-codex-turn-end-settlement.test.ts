@@ -33,12 +33,6 @@ import {
   stopStructuredAgentSessionRuntime
 } from './structured-agent-session-runtime'
 
-// A Stop must never reach for real processes on this machine under a made-up pid.
-vi.mock('../codex/codex-structured-turn-processes', () => ({
-  captureCodexTurnProcesses: async () => null,
-  terminateCodexTurnProcesses: async () => true
-}))
-
 const CALLER = { callerKey: 'codex-turn-end-test' }
 const MODEL = {
   model: 'gpt-test',
@@ -277,7 +271,7 @@ describe('a Stop in that window that the turn never opens for', () => {
   it('lets a chat closed behind it close within its bound and one eviction', async () => {
     const { stopping } = await waitingStop()
 
-    const closing = host.close(SESSION)
+    const closing = host.close(SESSION, 'evict')
 
     expect(
       await settledWithin(closing, CODEX_STOP_TURN_OPEN_WAIT_MS + CHILD_EVICTION_TIMEOUT_MS)
@@ -311,7 +305,7 @@ describe('a cold send with no Stop behind it', () => {
   it('never delays closing the chat', async () => {
     await answeredColdSend()
 
-    expect(await settledWithin(host.close(SESSION), PROMPTLY_MS)).not.toBe('held')
+    expect(await settledWithin(host.close(SESSION, 'evict'), PROMPTLY_MS)).not.toBe('held')
     expect(childCloses).toBe(1)
   })
 

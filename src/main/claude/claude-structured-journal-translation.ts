@@ -1,3 +1,7 @@
+import {
+  childEndCauseOfEndedEvent,
+  turnVerdictForChildEnd
+} from '../native-chat/agent-session-wire/structured-agent-session-stale-turn-verdict'
 import type { AgentSessionDeltaCoalescerDeps } from '../native-chat/agent-session-wire/agent-session-delta-coalescer'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeJournalTranslator } from './claude-journal-translator-contract'
@@ -16,6 +20,7 @@ import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import { ClaudeToolOriginRegistry } from './claude-tool-origin-registry'
 import { ClaudeProvisionalRowCorrections } from './claude-provisional-row-corrections'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
+import { ClaudeJournaledRoster } from './claude-subagent-journaled-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
 import {
@@ -77,12 +82,15 @@ export function createClaudeJournalTranslator(
   const fallbackId = deps.fallbackIdPrefix ?? 'acquisition'
   const providerFallback = createClaudeProviderFrameFallback(deps.sink, fallbackId, turnScope)
   const toolOrigins = new ClaudeToolOriginRegistry()
+  const journaled = new ClaudeJournaledRoster(() => deps.sink.journalLinkage?.() ?? null)
   const subagents = new ClaudeSubagentRoster({
     sink: deps.sink,
     currentGroupKey: () => turn.groupKey,
     currentTurnScope: turnScope,
     isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
     childOwnerRefOf: (toolUseId) => toolOrigins.childOwnerRef(toolUseId),
+    // A restarted provider continues the roster earlier runs journaled.
+    journaled,
     // A settled group can receive no further announcement, so a correction
     // still owed is never coming; the rows keep the stamp they already have.
     onIdentitiesFinal: () => corrections.abandon()
@@ -107,6 +115,7 @@ export function createClaudeJournalTranslator(
   const backgroundTasks = new ClaudeBackgroundTaskRows({
     sink: deps.sink,
     isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
+    rosteredByEarlierRun: (taskId) => journaled.groupOf(taskId) !== null,
     // A typed task row is provider output: journaling one must open a resumed
     // turn, or the session shows the row while reading idle.
     openOutputTurn: (frame, observedAt) =>
@@ -180,8 +189,11 @@ export function createClaudeJournalTranslator(
         streamedText.flush()
         subagents.settleSession()
         backgroundTasks.settleSession()
-        // The host saw the child end, so the turn's end is observed, not lost.
-        turn.settle({ state: 'interrupted', completedAt: event.observedAt ?? Date.now() })
+        // The host saw the child end, so the turn's end is observed, not lost; its verdict is only
+        // what the host's own cause says, a user's stop of this chat or else news.
+        turn.settle(
+          turnVerdictForChildEnd(childEndCauseOfEndedEvent(event), event.observedAt ?? Date.now())
+        )
         // A frame that arrives after the child is gone must not open a turn no
         // event can close.
         turn.suppressReopen()
@@ -270,6 +282,8 @@ export function createClaudeJournalTranslator(
     get currentTurnId() {
       return turn.id
     },
+    recordTurnStop: (turnId, cause) => turn.recordStop(turnId, cause),
+    withdrawTurnStop: (turnId) => turn.withdrawStop(turnId),
     get commandTurnId() {
       return turn.command ? turn.id : null
     },

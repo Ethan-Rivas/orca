@@ -65,11 +65,13 @@ function buildModel(
     miniMaxApiKeyDraft: '',
     setMiniMaxApiKeyDraft: vi.fn(),
     miniMaxApiKeyConfigured: false,
+    miniMaxApiKeyProtection: null,
     saveMiniMaxApiKey: vi.fn(),
     clearMiniMaxApiKey: vi.fn(),
     miniMaxCookieDraft: '',
     setMiniMaxCookieDraft: vi.fn(),
     miniMaxConfigured: false,
+    miniMaxCookieProtection: null,
     miniMaxCredentialBusy: false,
     saveMiniMaxCookie: vi.fn(),
     clearMiniMaxCookie: vi.fn()

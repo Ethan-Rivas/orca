@@ -13,6 +13,7 @@
 
 import {
   readAgentSessionFailureFact,
+  readWholeAgentSessionFailureFact,
   type AgentSessionFailureFact
 } from '../../../../shared/agent-session-failure'
 import { agentJournalSubmissionKey } from '../../../../shared/agent-session-journal-item-key'
@@ -66,13 +67,28 @@ export function sameAgentSessionFailureFact(
   )
 }
 
+/** Whether a loaded start-failure row already states this failure. Matching is identity, not
+ *  wording: what this build can read is enough. */
+export function agentSessionFailureStatedByStartRow(
+  failure: unknown,
+  startFailures: readonly AgentSessionFailureFact[]
+): boolean {
+  const fact = readAgentSessionFailureFact(failure)
+  return (
+    fact !== undefined && startFailures.some((stated) => sameAgentSessionFailureFact(stated, fact))
+  )
+}
+
 function deliveryNoticeText(
   entry: StructuredAgentSessionOutboxEntry,
   context: AgentSessionFailureWordsContext,
   recorded: AgentJournalSubmission | undefined,
   startFailures: readonly AgentSessionFailureFact[]
 ): string {
-  if (entry.state === 'unconfirmed') {
+  // A send attempted before a Stop and then interrupted may already be with the host.
+  const attemptedAcrossStop =
+    entry.outlivedStop === true && entry.lastAttemptAt !== null && !entry.lastFailure
+  if (entry.state === 'unconfirmed' || attemptedAcrossStop) {
     return translate(
       'auto.components.native.chat.NativeChatStructuredSession.1f772bb5d0',
       'Message delivery is unconfirmed.'
@@ -84,16 +100,18 @@ function deliveryNoticeText(
       'Message was not sent.'
     )
   }
-  const fact = readAgentSessionFailureFact(recorded?.rejection)
   if (
     entry.state === 'rejected' &&
-    fact &&
-    startFailures.some((stated) => sameAgentSessionFailureFact(stated, fact))
+    agentSessionFailureStatedByStartRow(recorded?.rejection, startFailures)
   ) {
     return agentSessionWriteNoticeText(agentSessionWriteNotDoneParts('send'))
   }
   return agentSessionWriteNoticeText(
-    structuredAgentSessionAttemptFailureParts(entry.lastFailure, context, fact)
+    structuredAgentSessionAttemptFailureParts(
+      entry.lastFailure,
+      context,
+      readWholeAgentSessionFailureFact(recorded?.rejection)
+    )
   )
 }
 

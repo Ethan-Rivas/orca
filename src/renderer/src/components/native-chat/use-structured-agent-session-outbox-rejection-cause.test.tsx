@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
 import { DISPATCH_REJECTED_CANCELLED } from '../../../../shared/structured-agent-session-dispatch-rejection'
@@ -14,6 +14,7 @@ vi.mock('@/runtime/structured-agent-session-client', () => ({
 }))
 
 import { setLocalRuntimeCapabilitiesForTests } from '@/runtime/local-runtime-capabilities'
+import { RuntimeRpcCallError } from '@/runtime/runtime-rpc-result'
 import { useStructuredAgentSessionOutbox } from './use-structured-agent-session-outbox'
 import { agentSessionWriteNoticeEnglish } from '../../../../shared/agent-session-refusal-notice'
 import { structuredAgentSessionAttemptFailureParts } from '../../../../shared/structured-agent-session-send-disposition'
@@ -22,6 +23,9 @@ import {
   type StructuredAgentSessionOutboxEntry
 } from '../../../../shared/structured-agent-session-outbox'
 import { writeOutbox } from './structured-agent-session-outbox-storage'
+
+// Why: every hook here shares the session outbox store; one left mounted would drain the next test's.
+afterEach(cleanup)
 
 function shownFailure(entry: StructuredAgentSessionOutboxEntry | undefined): string | undefined {
   return (
@@ -448,5 +452,88 @@ describe('a send refused while its agent restarted', () => {
     await waitFor(() => expect(result.current.outbox).toHaveLength(0))
     expect(result.current.error).toBeNull()
     expect(result.current.blockedClientMessageId).toBeNull()
+  })
+})
+
+describe('a send the host refused by throwing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it("keeps the refusal on the message, with the refusal's words and not a bare failure", async () => {
+    // As `mapRuntimeError` sends a thrown refusal (pinned in `rpc/errors.test.ts`).
+    mocks.call.mockRejectedValue(
+      new RuntimeRpcCallError({
+        id: 'req-1',
+        ok: false,
+        error: {
+          code: 'runtime_error',
+          message: 'agent_session_journal_unreadable',
+          data: {
+            refusal: {
+              code: 'agent_session_journal_unreadable',
+              details: { reason: 'journalCorrupt' }
+            }
+          }
+        }
+      })
+    )
+    const { result } = renderHook(() =>
+      useStructuredAgentSessionOutbox({
+        sessionId: 'session-1',
+        target: { kind: 'local' },
+        fence: 1,
+        submissions: []
+      })
+    )
+
+    act(() => expect(result.current.send('hello')).toBe(true))
+
+    await waitFor(() =>
+      expect(result.current.outbox[0]?.lastFailure).toEqual({
+        kind: 'refused',
+        code: 'agent_session_journal_unreadable',
+        details: { reason: 'journalCorrupt' }
+      })
+    )
+    expect(shownFailure(result.current.outbox[0])).toBe(
+      'Unable to load this chat. Your message was not sent.'
+    )
+  })
+})
+
+describe('a send refused on a journal a newer Orca wrote', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('says to update Orca, not to try again', async () => {
+    // As the host answers it (pinned in `journal-open-failure.test.ts`).
+    mocks.call.mockResolvedValue({
+      ok: false,
+      refusal: {
+        code: 'agent_session_journal_unreadable',
+        message: 'Chats were saved by a newer Orca. Update Orca to keep using them.',
+        details: { reason: 'journalWrittenByNewerOrca' }
+      }
+    })
+    const { result } = renderHook(() =>
+      useStructuredAgentSessionOutbox({
+        sessionId: 'session-1',
+        target: { kind: 'local' },
+        fence: 1,
+        submissions: []
+      })
+    )
+
+    act(() => expect(result.current.send('hello')).toBe(true))
+
+    await waitFor(() =>
+      expect(shownFailure(result.current.outbox[0])).toBe(
+        'Chats were saved by a newer Orca. Your message was not sent. Update Orca to keep using them.'
+      )
+    )
   })
 })

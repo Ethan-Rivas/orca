@@ -145,6 +145,15 @@ export const TerminalWait = TerminalHandle.extend({
   timeoutMs: OptionalFiniteNumber
 })
 
+const TerminalColorQueryReplyColorsParam = z.object({
+  foreground: z.string().max(128).optional(),
+  background: z.string().max(128).optional()
+})
+
+export const TerminalSetViewerColors = z.object({
+  colors: TerminalColorQueryReplyColorsParam
+})
+
 export const TerminalCreateParams = z.object({
   worktree: OptionalString,
   clientMutationId: z.string().min(1).max(128).optional(),
@@ -176,12 +185,7 @@ export const TerminalCreateParams = z.object({
   launchToken: OptionalString,
   launchAgent: z.string().refine(isTuiAgent).optional(),
   terminalKittyKeyboardProtocol: z.boolean().optional(),
-  terminalColorQueryReplies: z
-    .object({
-      foreground: z.string().max(128).optional(),
-      background: z.string().max(128).optional()
-    })
-    .optional(),
+  terminalColorQueryReplies: TerminalColorQueryReplyColorsParam.optional(),
   title: OptionalString,
   focus: z.unknown().optional(),
   rendererBacked: z.unknown().optional(),

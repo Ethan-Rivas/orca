@@ -3,13 +3,15 @@ import type {
   AgentJournalMessageItem,
   AgentSessionJournalIdentity
 } from '../../shared/agent-session-journal-types'
+import type { AgentSessionBackgroundTaskState } from '../../shared/agent-session-wire'
 import { isCodexAppServerRequestError } from './codex-app-server-connection'
 import type {
   AgentSessionAcquisition,
   AgentSessionDispatchOutcome,
   StructuredAgentSessionAcquireInput,
   StructuredAgentSessionAdapter,
-  StructuredAgentSessionSetOptionInput
+  StructuredAgentSessionSetOptionInput,
+  StructuredAgentSessionStopCause
 } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
 import type { CodexJournalTranslationAdmission } from './codex-structured-journal-translation'
 import { dispatchCodexTurn, isCodexTurnOptionKey } from './codex-structured-turn-start'
@@ -33,7 +35,6 @@ import {
   deliverCodexUnhandledFrame,
   translateCodexNotification
 } from './codex-structured-provider-events'
-import { CodexStructuredTurnCancellation } from './codex-structured-turn-cancellation'
 import {
   codexDispatchRejection,
   settleCodexSendsInEndedTurn
@@ -55,7 +56,6 @@ export type {
 export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdapter {
   private readonly sessions = new Map<string, CodexSession>()
   private readonly acquisitions = new CodexAcquisitionRegistry()
-  private readonly turnCancellation: CodexStructuredTurnCancellation
   private readonly notificationRetries: ReturnType<typeof createCodexStructuredNotificationRetry>
   private readonly teardown: CodexStructuredSessionTeardown
 
@@ -70,7 +70,6 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
           params,
           observedAt,
           dispatchSequenceAtReceipt,
-          turnCancellation: this.turnCancellation,
           emit: (current, event) => this.emit(current, event)
         })
     })
@@ -78,29 +77,7 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
       sessions: this.sessions,
       acquisitions: this.acquisitions,
       ...(deps.onEvent ? { onEvent: deps.onEvent } : {}),
-      ...(deps.onBackgroundTasksChanged
-        ? { onBackgroundTasksChanged: deps.onBackgroundTasksChanged }
-        : {}),
       forgetNotificationRetries: (sessionId) => this.notificationRetries.clear(sessionId, null)
-    })
-    this.turnCancellation = new CodexStructuredTurnCancellation({
-      captureTurnProcesses: deps.captureTurnProcesses,
-      terminateTurnProcesses: deps.terminateTurnProcesses,
-      requestTimeoutMs: deps.requestTimeoutMs,
-      emit: (session, event) => {
-        const admission = this.emit(session, event)
-        if (!admission.accepted && event.type === 'notification') {
-          const { sessionId, method, params, observedAt, dispatchSequenceAtReceipt } = event
-          this.notificationRetries.handle(
-            sessionId,
-            method,
-            params,
-            observedAt,
-            dispatchSequenceAtReceipt
-          )
-        }
-        return admission
-      }
     })
   }
 
@@ -113,7 +90,6 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
       deps: this.deps,
       sessions: this.sessions,
       acquisitions: this.acquisitions,
-      turnCancellation: this.turnCancellation,
       notificationRetries: this.notificationRetries,
       deliver: (acquisition, sessionId, event, retainedBytes) =>
         this.deliver(acquisition, sessionId, event, retainedBytes),
@@ -160,11 +136,9 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
       settleCodexSendsInEndedTurn(session, event.method, event.params, (settlement) =>
         this.deps.onDispatchSettledLate?.({ sessionId: event.sessionId, ...settlement })
       )
-      // After the admission check, so a refused frame is observed by the strip
+      // After the admission check, so a refused frame is observed by the child records
       // only on the retry that also reaches the journal.
-      if (session.backgroundTasks.observe(event, session.prompts.takeAbandonedCommands())) {
-        this.deps.onBackgroundTasksChanged?.(event.sessionId, session.backgroundTasks.state)
-      }
+      session.backgroundTasks.observe(event, session.prompts.takeAbandonedCommands())
       // After the journal and the parent's republished row, never ahead of either.
       session.backgroundTasks.publishChildWork()
     }
@@ -191,9 +165,16 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
     )
   }
 
-  backgroundTaskState: NonNullable<StructuredAgentSessionAdapter['backgroundTaskState']> = (
+  /** The tracker's own roster. No host decision reads it: the host's child records are the one
+   *  owner of "what runs", and this stays only so tests can hold the two rule sets side by side. */
+  backgroundTaskState = (sessionId: string): AgentSessionBackgroundTaskState | null | undefined =>
+    this.sessions.get(sessionId)?.backgroundTasks.state
+
+  // Codex exposes no honest stop for a child thread or a persistent command.
+  backgroundTaskStops: NonNullable<StructuredAgentSessionAdapter['backgroundTaskStops']> = (
     sessionId
-  ) => this.sessions.get(sessionId)?.backgroundTasks.state
+  ) =>
+    this.sessions.has(sessionId) ? { supportsTaskStop: false, supportsStopAll: false } : undefined
 
   bindPromptItemId = (
     sessionId: string,
@@ -222,7 +203,6 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
     const session = this.session(input.sessionId)
     session.dispatchPending = true
     try {
-      await this.turnCancellation.captureBaseline(session)
       await input.beforeDispatch?.()
       return await dispatchCodexTurn(session, input, this.deps.requestTimeoutMs)
     } finally {
@@ -234,7 +214,7 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
     cancelCodexStructuredTurn({
       request,
       sessions: this.sessions,
-      cancellation: this.turnCancellation
+      requestTimeoutMs: this.deps.requestTimeoutMs
     })
 
   rewindSupport: NonNullable<StructuredAgentSessionAdapter['rewindSupport']> = (sessionId) =>
@@ -253,7 +233,6 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
     const session = this.session(input.sessionId)
     session.translator?.beginCommand(input.command)
     try {
-      await this.turnCancellation.captureBaseline(session)
       await session.connection.request(
         'thread/compact/start',
         { threadId: session.threadId },
@@ -310,9 +289,11 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
     identity: AgentSessionJournalIdentity
   }): Promise<string | null> => this.sessions.get(input.identity.sessionId)?.historyPath ?? null
 
-  closeSession = (sessionId: string): Promise<boolean> => this.teardown.close(sessionId)
+  closeSession = (sessionId: string, cause?: StructuredAgentSessionStopCause): Promise<boolean> =>
+    this.teardown.close(sessionId, cause)
   forceCloseSession = (sessionId: string): Promise<boolean> => this.teardown.forceClose(sessionId)
-  disposeSession = (sessionId: string): Promise<boolean> => this.teardown.close(sessionId)
+  disposeSession = (sessionId: string, cause?: StructuredAgentSessionStopCause): Promise<boolean> =>
+    this.teardown.close(sessionId, cause)
   closeAll = (): Promise<void> => this.teardown.closeAll()
   releaseAcquisition = (input: { sessionId: string }): Promise<boolean> =>
     this.teardown.close(input.sessionId)

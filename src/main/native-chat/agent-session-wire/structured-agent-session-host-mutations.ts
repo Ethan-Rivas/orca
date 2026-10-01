@@ -7,10 +7,7 @@
 // admitted without the writer lease; the delivery loop starts the provider child a send needs, and
 // an operation only the provider can perform starts it before admission.
 
-import type {
-  AgentJournalItemIdentity,
-  AgentJournalMessageItem
-} from '../../../shared/agent-session-journal-types'
+import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionCancelResult,
   AgentSessionMutationEnvelope,
@@ -21,15 +18,15 @@ import type {
   AgentSessionThreadGoalChange,
   AgentSessionThreadGoalResult
 } from '../../../shared/agent-session-wire'
-import { isStructuredAgentSessionMainAgentWorking } from '../../../shared/structured-agent-session-main-agent-working'
-import {
-  agentSessionFailureWords,
-  type AgentJournalDispatchRejection
-} from '../../../shared/agent-session-failure-words'
+import { agentSessionFailureWords } from '../../../shared/agent-session-failure-words'
 import { agentSessionFailureFact } from '../../../shared/agent-session-failure'
 import type { AgentSessionPromptRequest } from './structured-agent-session-turns-prompt'
+import type { AgentChildWorkView } from '../../../shared/agent-status-child-work-view'
 import { threadGoalPlan } from './structured-agent-session-thread-goal'
-import { structuredAgentSessionConversationFence } from './structured-agent-session-provider-child'
+import {
+  isMainAgentWorkingOnceFlushed,
+  performCancel
+} from './structured-agent-session-turns-cancel'
 import {
   admitAndRunAgentSessionMutation,
   type AgentSessionMutationRequest,
@@ -68,6 +65,8 @@ export type StructuredAgentSessionMutationContext = {
   flushStreamedEvents: (sessionId: string) => Promise<void>
   /** The host's accessor, for a caller outside the session's serialize. */
   conversation: (sessionId: string) => Promise<StructuredAgentSessionHostSession>
+  /** The session's child records, as the strip reads them; what command admission decides on. */
+  readChildWork: (sessionId: string) => AgentChildWorkView[] | undefined
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
   /** The session's conversation, opened when closed; inside the caller's serialize. */
   openConversation: (sessionId: string) => Promise<StructuredAgentSessionHostSession | null>
@@ -163,7 +162,7 @@ export function cancelStructuredAgentSessionTurn(
       context,
       caller,
       params.envelope,
-      cancelPlan(params),
+      cancelPlan({ ...params, childWork: () => context.readChildWork(params.envelope.sessionId) }),
       openForWrite(context, params.envelope)
     )
   }
@@ -197,13 +196,7 @@ export function cancelStructuredAgentSessionTurn(
           }
           // A Stop naming no turn ends nothing more unless the session reads working, by the rule
           // every session list and the chat's own Stop read it.
-          const inFlight =
-            params.turnId !== undefined ||
-            isStructuredAgentSessionMainAgentWorking(
-              ctx.journal.activeTurnId(),
-              ctx.journal.submissions(),
-              ctx.fence
-            )
+          const inFlight = params.turnId !== undefined || (await isMainAgentWorkingOnceFlushed(ctx))
           const record = context.deps.store.getRecord(ctx.sessionId)
           if (!child || !inFlight) {
             if (withdrawn.length > 0) {
@@ -212,10 +205,15 @@ export function cancelStructuredAgentSessionTurn(
             return { ok: true, value: { ...named, cancelled: withdrawn.length > 0 } }
           }
           await tookEffect()
-          return plan.run({
-            ...ctx,
-            failureTextContext: structuredAgentSessionFailureWordsContext(record)
-          })
+          return performCancel(
+            { ...ctx, failureTextContext: structuredAgentSessionFailureWordsContext(record) },
+            {
+              clientOperationId: params.envelope.clientOperationId,
+              ...named,
+              stopChild: () => context.stopAgent(params.envelope.sessionId),
+              withdrewQueued: withdrawn.length > 0
+            }
+          )
         })
     },
     openForWrite(context, params.envelope)
@@ -276,41 +274,6 @@ export function changeStructuredAgentSessionThreadGoal(
     params.envelope,
     threadGoalPlan(params),
     openWithAgent(context, params.envelope)
-  )
-}
-
-/** Settle provider-proven delivery independently of an in-flight client mutation. */
-export async function settleStructuredAgentSessionLateDispatch(
-  context: StructuredAgentSessionMutationContext,
-  input: {
-    sessionId: string
-    clientMessageId: string
-  } & (
-    | { providerIdentity: AgentJournalItemIdentity }
-    | ({ state: 'rejected' } & AgentJournalDispatchRejection)
-  )
-): Promise<void> {
-  const session = context.sessions.get(input.sessionId)
-  if (!session) {
-    return
-  }
-  const fence = structuredAgentSessionConversationFence(context.deps.store, input.sessionId)
-  // The journal queue drains before close; the host queue would defer this past teardown.
-  await session.journal.resolveDispatch(
-    'providerIdentity' in input
-      ? {
-          clientMessageId: input.clientMessageId,
-          state: 'accepted',
-          providerIdentity: input.providerIdentity,
-          fence
-        }
-      : {
-          clientMessageId: input.clientMessageId,
-          state: 'rejected',
-          reason: input.reason,
-          rejection: input.rejection,
-          fence
-        }
   )
 }
 
