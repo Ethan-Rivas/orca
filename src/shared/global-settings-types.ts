@@ -37,23 +37,10 @@ import type {
   TaskViewPresetId
 } from './ui-chrome-types'
 import type { SetupScriptLaunchMode } from './worktree/launch-types'
-import type {
-  CustomWorktreeVisibilitySource,
-  ExternalWorktreeVisibility,
-  WorktreeVisibilitySourcePreferences
-} from './repo-types'
+import type { WorktreeVisibilityDefaults } from './worktree-visibility-defaults'
 
 /** MiniMax account region used to select the quota endpoint. */
 export type MiniMaxEndpoint = 'overseas' | 'cn'
-
-export type WorktreeVisibilityDefaults = {
-  /** Default for worktrees outside a recognized source. */
-  external?: ExternalWorktreeVisibility
-  /** Host-owned roots applied to every repository on that host. */
-  customSources?: CustomWorktreeVisibilitySource[]
-  /** Defaults for built-in and host-owned custom sources. */
-  sourcePreferences?: WorktreeVisibilitySourcePreferences
-}
 
 export type GlobalSettings = {
   workspaceDir: string
@@ -422,6 +409,12 @@ export type GlobalSettings = {
   agentStatusHooksEnabled: boolean
   /** When true, projects without a saved Claude account prompt for one before launching Claude. */
   askClaudeAccountPerProject?: boolean
+  /** A local agent-state-rules.json that replaces downloaded and bundled rules, for testing a rule
+   *  change. */
+  agentStateRulesPath?: string | null
+  /** Off: rules are never downloaded and a cached download is ignored, so the bundled rules (or a
+   *  local override) apply. Absent reads as on. */
+  agentStateRulesLiveUpdates?: boolean
   /** Pre-trust the worktree or folder Orca starts an agent in, so its "trust this folder?" prompt is skipped. Defaults on. */
   agentWorkspaceTrustEnabled: boolean
   /** Why: Codex's shared server runs every tab's hooks with the first tab's env; off opts new terminals back into it. Absent reads as on. */
@@ -538,6 +531,7 @@ export type OrcaWorkspaceLayout = {
   nestWorkspaces: boolean
 }
 
-// Re-exported so existing importers keep one entry point; the shape lives in its
-// own file because this one is at the max-lines ceiling.
+// Re-exported so existing importers keep one entry point; these shapes live in
+// their own files because this one is at the max-lines ceiling.
 export type { GhosttyImportPreview } from './ghostty-import-preview'
+export type { WorktreeVisibilityDefaults } from './worktree-visibility-defaults'
