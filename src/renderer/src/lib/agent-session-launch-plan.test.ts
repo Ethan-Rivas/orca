@@ -85,7 +85,9 @@ describe('planAgentSessionLaunch', () => {
         prompt: 'Review this',
         promptDelivery: 'submit-after-ready',
         resumeFrom,
-        onPromptDelivered
+        onPromptDelivered,
+        // The chat is created on the host the route was decided for.
+        executionHostId: 'local'
       },
       hooks
     )
@@ -101,7 +103,7 @@ describe('planAgentSessionLaunch', () => {
     expect(mocks.beginStructuredAgentLaunchSettlement).toHaveBeenCalledWith(
       'folder:ws-1',
       'codex',
-      {},
+      { executionHostId: 'local' },
       hooks
     )
   })
@@ -129,7 +131,7 @@ describe('planAgentSessionLaunch', () => {
     expect(mocks.beginStructuredAgentLaunchSettlement).toHaveBeenCalledWith(
       'wt-created',
       'codex',
-      { prompt: 'Fix it', promptDelivery: 'auto-submit' },
+      { prompt: 'Fix it', promptDelivery: 'auto-submit', executionHostId: 'local' },
       hooks
     )
   })
