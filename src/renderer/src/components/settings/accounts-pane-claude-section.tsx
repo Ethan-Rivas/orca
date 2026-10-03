@@ -7,7 +7,7 @@ import { Label } from '../ui/label'
 import { Switch } from '../ui/switch'
 import { ClaudeIcon } from '../status-bar/icons'
 import { SearchableSetting } from './SearchableSetting'
-import { getAskClaudeAccountPerProjectSearchKeywords } from './accounts-search'
+import { getAskClaudeAccountPerProjectSearchKeywords } from './accounts-claude-search'
 import {
   getProviderAccountRuntime,
   providerAccountIsActiveInView

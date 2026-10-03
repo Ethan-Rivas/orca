@@ -2,6 +2,7 @@ import type { SettingsSearchEntry } from './settings-search'
 import { translate } from '@/i18n/i18n'
 import { translateSearchKeyword } from './settings-search-keywords'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
+import { getAccountsClaudeSearchEntries } from './accounts-claude-search'
 
 export const getAccountsLocationSearchEntries = createLocalizedCatalog(() => [
   {
@@ -20,73 +21,6 @@ export const getAccountsLocationSearchEntries = createLocalizedCatalog(() => [
       ...translateSearchKeyword('auto.components.settings.accounts.search.e02c136ad0', 'auth')
     ]
   }
-])
-
-const getAskClaudeAccountPerProjectSearchEntry = createLocalizedCatalog(
-  (): SettingsSearchEntry => ({
-    title: translate(
-      'auto.components.settings.AccountsPane.askClaudeAccountPerProjectTitle',
-      'Ask which Claude account to use for each project'
-    ),
-    description: translate(
-      'auto.components.settings.AccountsPane.askClaudeAccountPerProjectDescription',
-      'When on, projects without a saved Claude account ask before starting Claude.'
-    ),
-    keywords: [
-      ...translateSearchKeyword('auto.components.settings.accounts.search.e14049e1a8', 'claude'),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.06662af91e', 'account'),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.askPerProjectAccounts',
-        'accounts'
-      ),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.askPerProjectProject',
-        'project'
-      ),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.askPerProjectPerProject',
-        'per project'
-      ),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.askPerProjectAsk', 'ask'),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.askPerProjectAskWhich',
-        'ask which'
-      ),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.askPerProjectPrompt',
-        'prompt'
-      )
-    ]
-  })
-)
-
-// Why: the toggle's own SearchableSetting needs the identical keyword set so a
-// query that opens this pane section also keeps the toggle itself visible.
-export function getAskClaudeAccountPerProjectSearchKeywords(): string[] {
-  return getAskClaudeAccountPerProjectSearchEntry().keywords ?? []
-}
-
-export const getAccountsClaudeSearchEntries = createLocalizedCatalog(() => [
-  {
-    title: translate('auto.components.settings.accounts.search.75682e1b62', 'Claude Accounts'),
-    description: translate(
-      'auto.components.settings.accounts.search.dd75a73991',
-      'Optional account switching for Claude while preserving shared chat context.'
-    ),
-    keywords: [
-      ...translateSearchKeyword('auto.components.settings.accounts.search.e14049e1a8', 'claude'),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.06662af91e', 'account'),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.5b3f18ef4a', 'switch'),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.8b06729e0f', 'active'),
-      ...translateSearchKeyword(
-        'auto.components.settings.accounts.search.86edc96bc9',
-        'status bar'
-      ),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.c759741d77', 'quota'),
-      ...translateSearchKeyword('auto.components.settings.accounts.search.f2d666a886', 'optional')
-    ]
-  },
-  getAskClaudeAccountPerProjectSearchEntry()
 ])
 
 export const getAccountsCodexSearchEntries = createLocalizedCatalog(() => [
@@ -262,6 +196,24 @@ export const getAccountsGrokSearchEntries = createLocalizedCatalog(() => [
   }
 ])
 
+export const getAccountsAntigravitySearchEntries = createLocalizedCatalog(() => [
+  {
+    title: translate('accounts.antigravity.searchTitle', 'Antigravity Accounts'),
+    description: translate(
+      'accounts.antigravity.searchDescription',
+      'Save and select native agy Google accounts on the execution host.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('accounts.antigravity.keyword.antigravity', 'antigravity'),
+      ...translateSearchKeyword('accounts.antigravity.keyword.agy', 'agy'),
+      ...translateSearchKeyword('accounts.antigravity.keyword.google', 'google'),
+      ...translateSearchKeyword('accounts.antigravity.keyword.accounts', 'accounts'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.a9f3d7b5c8', 'login'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.cursor.kw.usage', 'usage')
+    ]
+  }
+])
+
 export const getAccountsCursorSearchEntries = createLocalizedCatalog(() => [
   {
     title: translate('auto.components.settings.accounts.search.cursor.title', 'Cursor Usage'),
@@ -294,6 +246,36 @@ export const getAccountsCursorSearchEntries = createLocalizedCatalog(() => [
   }
 ])
 
+export const getAccountsZcodePlanSearchEntries = createLocalizedCatalog(() => [
+  {
+    title: translate('auto.components.settings.accounts.search.zcodePlan.title', 'GLM Coding Plan'),
+    description: translate(
+      'auto.components.settings.accounts.search.zcodePlan.description',
+      'Track Z.AI or Zhipu (BigModel) GLM Coding Plan usage. Pick the site and save the plan API key.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.accounts.search.zcodePlan.kw.glm', 'glm'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.zcodePlan.kw.zai', 'zai'),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.zcodePlan.kw.zhipu',
+        'zhipu'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.zcodePlan.kw.bigmodel',
+        'bigmodel'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.zcodePlan.kw.codingPlan',
+        'coding plan'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.zcodePlan.kw.rateLimit',
+        'rate limit'
+      )
+    ]
+  }
+])
+
 export const getAccountsPaneSearchEntries = createLocalizedCatalog((): SettingsSearchEntry[] => [
   ...getAccountsLocationSearchEntries(),
   ...getAccountsClaudeSearchEntries(),
@@ -302,5 +284,7 @@ export const getAccountsPaneSearchEntries = createLocalizedCatalog((): SettingsS
   ...getAccountsOpencodeSearchEntries(),
   ...getAccountsMiniMaxSearchEntries(),
   ...getAccountsGrokSearchEntries(),
-  ...getAccountsCursorSearchEntries()
+  ...getAccountsAntigravitySearchEntries(),
+  ...getAccountsCursorSearchEntries(),
+  ...getAccountsZcodePlanSearchEntries()
 ])
