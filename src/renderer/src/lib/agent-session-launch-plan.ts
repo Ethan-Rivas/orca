@@ -26,12 +26,18 @@ import {
   type StructuredAgentLaunchSettlement
 } from '@/lib/structured-agent-launch-settlement'
 import type { StructuredAgentLaunchOptions } from '@/lib/structured-agent-session-launch'
+import type { AgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 
-export type AgentSessionLaunchRequest = AgentLaunchRouteArgs & {
-  resumeFrom?: StructuredAgentSessionResumeSource
-  onPromptDelivered?: () => void
+type ClaudeAccountRouteArgs = AgentLaunchRouteArgs & {
   /** A one-time account choice; the project's saved account applies when omitted. */
   claudeAccountId?: string
+}
+
+export type AgentSessionLaunchRequest = ClaudeAccountRouteArgs & {
+  /** The user action this launch serves, minted where that action is handled. */
+  requestId: AgentLaunchRequestId
+  resumeFrom?: StructuredAgentSessionResumeSource
+  onPromptDelivered?: () => void
 }
 
 /**
@@ -41,6 +47,8 @@ export type AgentSessionLaunchRequest = AgentLaunchRouteArgs & {
  */
 export type AgentSessionLaunchVerdict = {
   route: AgentLaunchRoute
+  /** The user action this launch serves; a re-entry with this verdict is that same action. */
+  requestId: AgentLaunchRequestId
   agent: TuiAgent
   worktreeId?: string
   /** The host the structured route was decided for; the chat is created there. */
@@ -64,6 +72,8 @@ export type AgentSessionLaunchTarget = {
   executionHostId?: ExecutionHostId
   /** The saved selection that host said create will seed. */
   seedOptions?: Readonly<Record<string, string>>
+  /** The tab group the chat opens in. */
+  groupId?: string
 }
 
 export type AgentSessionLaunchPlan = Readonly<AgentSessionLaunchVerdict> & {
@@ -81,6 +91,7 @@ export type AgentSessionLaunchPlan = Readonly<AgentSessionLaunchVerdict> & {
 
 function structuredLaunchOptions(verdict: AgentSessionLaunchVerdict): StructuredAgentLaunchOptions {
   return {
+    requestId: verdict.requestId,
     ...(verdict.prompt !== undefined ? { prompt: verdict.prompt } : {}),
     ...(verdict.promptDelivery ? { promptDelivery: verdict.promptDelivery } : {}),
     ...(verdict.resumeFrom ? { resumeFrom: verdict.resumeFrom } : {}),
@@ -109,7 +120,8 @@ function beginStructuredPlanLaunch(
       {
         ...structuredLaunchOptions(verdict),
         ...(executionHostId ? { executionHostId } : {}),
-        ...(target?.seedOptions ? { hostSeedOptions: target.seedOptions } : {})
+        ...(target?.seedOptions ? { hostSeedOptions: target.seedOptions } : {}),
+        ...(target?.groupId ? { targetGroupId: target.groupId } : {})
       },
       hooks
     )
@@ -159,7 +171,7 @@ export function structuredAgentSessionLaunchFeasible(
 // Why: a structured session has no account-pinning path, so a pinned Claude launch runs in a terminal.
 function launchPinsClaudeAccount(
   store: AgentLaunchRouteStore,
-  request: AgentSessionLaunchRequest
+  request: ClaudeAccountRouteArgs
 ): boolean {
   if (request.agent !== 'claude') {
     return false
@@ -170,13 +182,21 @@ function launchPinsClaudeAccount(
 
 function resolvePlannedRoute(
   store: AgentLaunchRouteStore,
-  request: AgentSessionLaunchRequest,
+  request: ClaudeAccountRouteArgs,
   input: ReturnType<typeof buildAgentLaunchRouteInput>
 ): AgentLaunchRoute {
   const route = resolveAgentLaunchRoute(input)
   return route === 'structured-native-chat' && launchPinsClaudeAccount(store, request)
     ? 'terminal-tui'
     : route
+}
+
+/** The route a launch would take, for a caller that only branches on it and launches nothing. */
+export function resolveAgentSessionLaunchRoute(
+  store: AgentLaunchRouteStore,
+  request: ClaudeAccountRouteArgs
+): AgentLaunchRoute {
+  return resolvePlannedRoute(store, request, buildAgentLaunchRouteInput(store, request))
 }
 
 /** The one place a launch route is decided. Delivery mode is fixed here too, so the settle loop
@@ -191,6 +211,7 @@ export function planAgentSessionLaunch(
     route === 'structured-native-chat' ? parseExecutionHostId(input.executionHostId)?.id : undefined
   return adoptAgentSessionLaunchVerdict({
     route,
+    requestId: request.requestId,
     agent: request.agent,
     ...(executionHostId ? { executionHostId } : {}),
     ...(request.workspace.worktreeId ? { worktreeId: request.workspace.worktreeId } : {}),

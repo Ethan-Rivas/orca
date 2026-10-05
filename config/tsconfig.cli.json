@@ -33,6 +33,7 @@
     "../src/main/orca-profiles/profile-legacy-state-import.ts",
     "../src/main/persistence/profile-state/profile-state-migration.ts",
     "../src/main/persistence/profile-state/profile-state-database-publication.ts",
+    "../src/main/persistence/profile-state/profile-state-authority-marker.ts",
     "../src/main/persistence/profile-state/profile-state-database.ts",
     "../src/main/persistence/profile-state/profile-state-database-errors.ts",
     "../src/main/persistence/profile-state/profile-state-database-validation.ts",
@@ -258,8 +259,8 @@
   ],
   "compilerOptions": {
     "composite": true,
-    // TypeScript 7 removed node10 resolution; Node16 preserves CommonJS emit for this package.
-    "module": "Node16",
+    // The CLI runs on Node 24; Node20 models synchronous ESM imports from CommonJS.
+    "module": "Node20",
     "moduleResolution": "Node16",
     "rootDir": "../src",
     "outDir": "../out"

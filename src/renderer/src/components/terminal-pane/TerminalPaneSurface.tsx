@@ -4,6 +4,7 @@ import { DaemonActionDialog } from '@/components/shared/useDaemonActions'
 import { AgentSessionContinuationDialog } from '@/components/agent-session-continuation/AgentSessionContinuationDialog'
 import { WORKSPACE_FILE_PATH_MIME, WORKSPACE_FILE_PATHS_MIME } from '@/lib/workspace-file-drag'
 import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
+import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../../shared/claude/project-claude-account-preference'
 import {
   refusedClaudeLaunchStartupsFor,
@@ -196,6 +197,7 @@ export function TerminalPaneSurface({
                   // Why no tab close: the old tab may hold live split siblings.
                   openNewTab: () =>
                     launchAgentInNewTab({
+                      requestId: newAgentLaunchRequestId(),
                       agent: 'claude',
                       worktreeId,
                       claudeAccountId: ACTIVE_CLAUDE_ACCOUNT,

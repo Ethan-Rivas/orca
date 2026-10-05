@@ -90,7 +90,7 @@ describe('launchAgentInNewTab Claude account', () => {
   it("stamps the project's saved account on a Claude launch", async () => {
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
-    launchAgentInNewTab({ agent: 'claude', worktreeId: 'repo-1::/repo/wt' })
+    launchAgentInNewTab({ requestId: 'req-1', agent: 'claude', worktreeId: 'repo-1::/repo/wt' })
 
     expect(queuedLaunchConfig()).toEqual(expect.objectContaining({ claudeAccountId: 'acct-1' }))
   })
@@ -99,6 +99,7 @@ describe('launchAgentInNewTab Claude account', () => {
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
     launchAgentInNewTab({
+      requestId: 'req-1',
       agent: 'claude',
       worktreeId: 'repo-1::/repo/wt',
       claudeAccountId: 'acct-2'
@@ -110,7 +111,7 @@ describe('launchAgentInNewTab Claude account', () => {
   it('leaves other agents unstamped', async () => {
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
-    launchAgentInNewTab({ agent: 'codex', worktreeId: 'repo-1::/repo/wt' })
+    launchAgentInNewTab({ requestId: 'req-1', agent: 'codex', worktreeId: 'repo-1::/repo/wt' })
 
     expect(queuedLaunchConfig()).not.toHaveProperty('claudeAccountId')
   })
@@ -121,6 +122,7 @@ describe('launchAgentInNewTab Claude account', () => {
     const webLaunch = () => mockLaunchAgentInWebHostTab.mock.calls.at(-1)![0]
 
     launchAgentInNewTab({
+      requestId: 'req-1',
       agent: 'claude',
       worktreeId: 'repo-1::/repo/wt',
       claudeAccountId: 'acct-2'

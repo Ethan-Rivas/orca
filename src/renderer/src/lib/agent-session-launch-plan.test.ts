@@ -45,6 +45,7 @@ describe('planAgentSessionLaunch', () => {
 
   it('decides the route once, from the builder input, and never again on launch', async () => {
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-1',
       agent: 'codex',
       workspace: { kind: 'git-worktree', worktreeId: 'wt-1' },
       prompt: 'Fix it',
@@ -65,10 +66,11 @@ describe('planAgentSessionLaunch', () => {
     expect(mocks.resolveAgentLaunchRoute).toHaveBeenCalledOnce()
   })
 
-  it('hands the settle loop exactly the prompt, mode, resume source, and delivery hook it planned on', async () => {
+  it('hands the settle loop exactly the request, prompt, mode, resume source, and delivery hook it planned on', async () => {
     const onPromptDelivered = vi.fn()
     const resumeFrom = { providerSessionId: 'provider-1' }
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-2',
       agent: 'claude',
       workspace: { kind: 'folder', worktreeId: 'folder:ws-1' },
       prompt: 'Review this',
@@ -82,6 +84,7 @@ describe('planAgentSessionLaunch', () => {
       'folder:ws-1',
       'claude',
       {
+        requestId: 'request-2',
         prompt: 'Review this',
         promptDelivery: 'submit-after-ready',
         resumeFrom,
@@ -95,6 +98,7 @@ describe('planAgentSessionLaunch', () => {
 
   it('sends no delivery fields the request did not carry', async () => {
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-3',
       agent: 'codex',
       workspace: { kind: 'folder', worktreeId: 'folder:ws-1' }
     })
@@ -103,13 +107,14 @@ describe('planAgentSessionLaunch', () => {
     expect(mocks.beginStructuredAgentLaunchSettlement).toHaveBeenCalledWith(
       'folder:ws-1',
       'codex',
-      { executionHostId: 'local' },
+      { requestId: 'request-3', executionHostId: 'local' },
       hooks
     )
   })
 
   it('returns null for an agent that cannot hold a structured session even on the structured route', async () => {
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-4',
       agent: 'gemini',
       workspace: { kind: 'git-worktree', worktreeId: 'wt-1' }
     })
@@ -121,6 +126,7 @@ describe('planAgentSessionLaunch', () => {
 
   it('launches into the workspace created after planning when the target names one', async () => {
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-5',
       agent: 'codex',
       workspace: { kind: 'git-worktree', repoId: 'repo-1' },
       prompt: 'Fix it',
@@ -131,13 +137,19 @@ describe('planAgentSessionLaunch', () => {
     expect(mocks.beginStructuredAgentLaunchSettlement).toHaveBeenCalledWith(
       'wt-created',
       'codex',
-      { prompt: 'Fix it', promptDelivery: 'auto-submit', executionHostId: 'local' },
+      {
+        requestId: 'request-5',
+        prompt: 'Fix it',
+        promptDelivery: 'auto-submit',
+        executionHostId: 'local'
+      },
       hooks
     )
   })
 
   it('refuses to launch a prospective workspace that was never created', async () => {
     const plan = planAgentSessionLaunch(store, {
+      requestId: 'request-6',
       agent: 'codex',
       workspace: { kind: 'git-worktree', repoId: 'repo-1' }
     })
@@ -163,11 +175,12 @@ describe('planAgentSessionLaunch with a pinned Claude account', () => {
   })
 
   it("downgrades Claude to the terminal on the project's saved account or an explicit one", () => {
-    expect(planAgentSessionLaunch(pinnedStore, { agent: 'claude', workspace }).route).toBe(
-      'terminal-tui'
-    )
+    expect(
+      planAgentSessionLaunch(pinnedStore, { requestId: 'req-1', agent: 'claude', workspace }).route
+    ).toBe('terminal-tui')
     expect(
       planAgentSessionLaunch(store, {
+        requestId: 'req-1',
         agent: 'claude',
         workspace: { kind: 'git-worktree', worktreeId: 'wt-1' },
         claudeAccountId: 'acct-2'
@@ -178,14 +191,15 @@ describe('planAgentSessionLaunch with a pinned Claude account', () => {
   it('keeps the structured route for the active-account choice and for other agents', () => {
     expect(
       planAgentSessionLaunch(pinnedStore, {
+        requestId: 'req-1',
         agent: 'claude',
         workspace,
         claudeAccountId: ACTIVE_CLAUDE_ACCOUNT
       }).route
     ).toBe('structured-native-chat')
-    expect(planAgentSessionLaunch(pinnedStore, { agent: 'codex', workspace }).route).toBe(
-      'structured-native-chat'
-    )
+    expect(
+      planAgentSessionLaunch(pinnedStore, { requestId: 'req-1', agent: 'codex', workspace }).route
+    ).toBe('structured-native-chat')
   })
 })
 
@@ -241,6 +255,7 @@ describe('adoptAgentSessionLaunchVerdict', () => {
 
   it('re-enters a persisted verdict without resolving the route again', async () => {
     const plan = adoptAgentSessionLaunchVerdict({
+      requestId: 'request-7',
       route: 'structured-native-chat',
       agent: 'codex',
       prompt: 'Fix it',
@@ -255,13 +270,14 @@ describe('adoptAgentSessionLaunchVerdict', () => {
     expect(mocks.beginStructuredAgentLaunchSettlement).toHaveBeenCalledWith(
       'wt-recovered',
       'codex',
-      { prompt: 'Fix it', promptDelivery: 'draft' },
+      { requestId: 'request-7', prompt: 'Fix it', promptDelivery: 'draft' },
       hooks
     )
   })
 
   it('keeps a non-structured verdict out of the loop', async () => {
     const plan = adoptAgentSessionLaunchVerdict({
+      requestId: 'request-8',
       route: 'terminal-tui',
       agent: 'codex',
       worktreeId: 'wt-1'

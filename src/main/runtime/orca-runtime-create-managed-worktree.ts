@@ -13,15 +13,15 @@ import { prepareRuntimeLocalWorktreeSetup } from './runtime-local-worktree-setup
 import { invalidateAuthorizedRootsCacheForRepo } from '../ipc/filesystem-auth'
 import { startRuntimeLocalWorktreeTerminals } from './runtime-local-worktree-terminal-startup'
 import { trackRuntimeWorkspaceCreate } from '../workspace-create-telemetry'
+import { assertOpenCodeModelLaunchPreferencesAbsent } from '../opencode/opencode-model-startup-plan'
+import { resolveWorktreeCreateAgentStartup } from './runtime-worktree-agent-startup'
 import type { RuntimeWorkspaceCreateEvents } from '../workspace-create-telemetry'
 
 export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
   async createManagedWorktree(
     args: RuntimeManagedWorktreeCreateArgs
   ): Promise<CreateWorktreeResult> {
-    // Why a holder fired in `finally`: consuming a prepared checkout empties a pool slot, so a
-    // create that fails anywhere after that — include copy, push target, terminal startup — must
-    // still arm the replacement. On success it fires last, once the startup terminals are up.
+    // Re-arm a consumed checkout after terminal startup, including failed creates.
     const rearm: PreparationRearmHolder = { fire: () => {} }
     try {
       return await trackRuntimeWorkspaceCreate(args, (events) =>
@@ -41,25 +41,20 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       throw new Error('runtime_unavailable')
     }
 
+    assertOpenCodeModelLaunchPreferencesAbsent(
+      args.startupAgent ?? args.createdWithAgent,
+      args.startupLaunchPreferences
+    )
+
     const repo = await this.resolveRepoSelector(args.repoSelector)
     const createSettings = this.store.getSettings()
     const { requestedAgent, requestedAgentEnabled } = resolveRequestedStartupAgent(
       args,
       createSettings.disabledTuiAgents
     )
-    const agentStartup =
-      !args.startup && args.startupAgent
-        ? this.buildStartupForAgent(
-            repo,
-            args.startupAgent,
-            args.startupPrompt,
-            args.startupLaunchPreferences,
-            {
-              ...(args.startupAgentArgs !== undefined ? { agentArgs: args.startupAgentArgs } : {}),
-              ...(args.startupLaunchSource ? { launchSource: args.startupLaunchSource } : {})
-            }
-          )
-        : null
+    const agentStartup = resolveWorktreeCreateAgentStartup(args, (...inputs) =>
+      this.buildStartupForAgent(repo, ...inputs)
+    )
     const draftStartup =
       !args.startup && !agentStartup && args.startupDraft
         ? await this.buildStartupForDraft(
@@ -77,10 +72,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         draftStartup?.agent ??
         (requestedAgentEnabled ? requestedAgent : undefined))
     const effectiveDraftPaste = args.startupDraftPaste ?? draftStartup?.draftPaste
-    // Resolve the execution host once, shared with the `worktrees:create` IPC entry point so the
-    // two cannot answer differently for the same repo. Reading the raw `connectionId` field routes
-    // an `executionHostId: 'ssh:*'`-only repo down the local path, which runs `git worktree add` on
-    // the client against a remote path.
+    // Match IPC routing: executionHostId-only SSH repos must not create locally.
     const createRoute = resolveWorktreeCreateRoute(repo)
     const startupClaudeAccountId = this.resolveStartupClaudeAccount(args, createRoute.kind)
     if (isFolderRepo(repo)) {

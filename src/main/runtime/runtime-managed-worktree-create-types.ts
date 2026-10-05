@@ -53,6 +53,9 @@ export type RuntimeManagedWorktreeCreateArgs = {
   /** `--account <id|email>` for a `startupAgent: 'claude'` launch; resolved before any create. */
   startupClaudeAccount?: string
   startupPrompt?: string
+  /** Main-internal: set by a caller that delivers an uncarried `startupPrompt` itself, so the text
+   *  rides only a typed line that can carry it; reports whether it did. */
+  onStartupPromptCarry?: (carried: boolean) => void
   /** Per-launch inputs used when `startupAgent` is the created terminal surface. */
   startupAgentArgs?: string | null
   startupCwd?: string

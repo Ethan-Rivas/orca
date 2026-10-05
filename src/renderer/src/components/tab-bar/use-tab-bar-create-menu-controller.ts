@@ -7,12 +7,14 @@ import {
   launchAgentInNewTab,
   shouldQueueTerminalFocusAfterMenuClose
 } from '@/lib/launch-agent-in-new-tab'
+import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 import type { WindowsTerminalCapabilities } from '@/lib/windows-terminal-capabilities'
 import { useAppStore } from '../../store'
 import { launchWithClaudeAccountChoice } from '../claude-account-prompt/choose-claude-launch-account'
 import type { TabAgentLaunchOption } from './tab-agent-launch-options'
 import { buildTabCreateMenuOptions, type TabCreateMenuOption } from './tab-create-menu-options'
 import { resolveWindowsShellLaunchTarget } from './windows-shell-launch'
+import { focusNewActiveTerminalWhenReady } from './new-tab-menu-terminal-focus'
 import {
   buildWindowsShellMenuEntries,
   type WindowsShellMenuEntry
@@ -22,7 +24,6 @@ import type {
   resolveWindowsPowerShellImplementationSetting
 } from './use-tab-bar-runtime-model'
 
-const NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS = 50
 const NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS = 5000
 
 export type TabBarCreateMenuController = {
@@ -104,33 +105,12 @@ export function useTabBarCreateMenuController({
     window.clearTimeout(pendingNewTabMenuFocusRetryRef.current)
     pendingNewTabMenuFocusRetryRef.current = null
   }
-  const focusNewActiveTerminalWhenReady = (
-    previousActiveTabId: string | null,
-    expiresAt: number,
-    now: number
-  ): void => {
-    const state = useAppStore.getState()
-    if (
-      (state.activeTabType === 'terminal' || state.activeTabType === 'simulator') &&
-      state.activeTabId &&
-      state.activeTabId !== previousActiveTabId
-    ) {
-      focusTerminalTabSurface(state.activeTabId)
-      return
-    }
-    if (now >= expiresAt) {
-      return
-    }
-    pendingNewTabMenuFocusRetryRef.current = window.setTimeout(() => {
-      pendingNewTabMenuFocusRetryRef.current = null
-      focusNewActiveTerminalWhenReady(previousActiveTabId, expiresAt, Date.now())
-    }, NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS)
-  }
   const queueNewActiveTerminalFocusAfterNewTabMenuClose = (): void => {
     const previousActiveTabId = useAppStore.getState().activeTabId
     pendingNewTabMenuFocusRef.current = () => {
       // Why: paired web/SSH tab creation is async; await the host snapshot's new terminal instead of the pre-existing active tab.
       focusNewActiveTerminalWhenReady(
+        pendingNewTabMenuFocusRetryRef,
         previousActiveTabId,
         Date.now() + NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS,
         Date.now()
@@ -226,6 +206,7 @@ export function useTabBarCreateMenuController({
     const afterDeferredLaunch = runPendingNewTabMenuFocusAfterClose
     launchWithClaudeAccountChoice(agent, { worktreeId, afterDeferredLaunch }, (claudeAccountId) => {
       const result = launchAgentInNewTab({
+        requestId: newAgentLaunchRequestId(),
         agent,
         worktreeId,
         groupId: resolvedGroupId,

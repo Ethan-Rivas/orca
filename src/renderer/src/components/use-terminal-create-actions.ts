@@ -11,6 +11,7 @@ import {
 import { openMobileEmulatorTab } from '@/lib/open-mobile-emulator-tab'
 import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
 import { launchWithClaudeAccountChoice } from './claude-account-prompt/choose-claude-launch-account'
+import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 import { buildDuplicatedBrowserTabOptions } from '@/lib/duplicate-browser-tab-options'
 import { browserWorkspaceHasRemoteOwner } from '@/runtime/remote-browser-tab-ownership'
 import { getClientCreationActionPolicy } from '@/lib/client-creation-action-policy'
@@ -98,6 +99,7 @@ export function useTerminalCreateActions(controller: TerminalColdActivationContr
         state.groupsByWorktree[activeWorktreeId]?.[0]?.id
       launchWithClaudeAccountChoice(agent, { worktreeId: activeWorktreeId }, (claudeAccountId) => {
         const result = launchAgentInNewTab({
+          requestId: newAgentLaunchRequestId(),
           agent,
           worktreeId: activeWorktreeId,
           groupId: targetGroupId,
