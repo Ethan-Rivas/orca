@@ -8,6 +8,8 @@ export const CLAUDE_AUTH_ENV_VARS = [
 ] as const
 
 export type ClaudeEnvPatch = {
+  ORCA_CLAUDE_PROFILE_POINTER?: string
+  ORCA_CLAUDE_INJECTED_CONFIG_DIR?: string
   CLAUDE_CONFIG_DIR?: string
   /** Claude Code 2.1.220+ hashes this, not CLAUDE_CONFIG_DIR, for its scoped Keychain item. */
   CLAUDE_SECURESTORAGE_CONFIG_DIR?: string
@@ -35,6 +37,12 @@ export function applyClaudeEnvPatch(
     }
   }
 
+  if (patch.ORCA_CLAUDE_PROFILE_POINTER) {
+    baseEnv.ORCA_CLAUDE_PROFILE_POINTER = patch.ORCA_CLAUDE_PROFILE_POINTER
+  }
+  if (patch.ORCA_CLAUDE_INJECTED_CONFIG_DIR) {
+    baseEnv.ORCA_CLAUDE_INJECTED_CONFIG_DIR = patch.ORCA_CLAUDE_INJECTED_CONFIG_DIR
+  }
   if (patch.CLAUDE_CONFIG_DIR) {
     baseEnv.CLAUDE_CONFIG_DIR = patch.CLAUDE_CONFIG_DIR
   }

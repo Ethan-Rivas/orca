@@ -142,7 +142,8 @@ async function commitReservedRuntimePtySpawn(ctx: RuntimePtySpawnState) {
   }
   if (ctx.hostSessionBinding && !ctx.stablePaneBindingPersisted) {
     try {
-      const { store, worktreeId, tabId, leafId, expectedSourceBinding } = ctx.hostSessionBinding
+      const { store, worktreeId, tabId, leafId, expectedSourceBinding, placement } =
+        ctx.hostSessionBinding
       const binding = {
         worktreeId,
         tabId,
@@ -152,6 +153,7 @@ async function commitReservedRuntimePtySpawn(ctx: RuntimePtySpawnState) {
         ...(ctx.result.incarnationId ? { incarnationId: ctx.result.incarnationId } : {}),
         ...(ctx.cwd ? { startupCwd: ctx.cwd } : {}),
         ...(expectedSourceBinding ? { expectedSourceBinding } : {}),
+        ...(placement ? { placement } : {}),
         origin: spawnCommitBindingOrigin(ctx.result, expectedSourceBinding)
       }
       const persisted = args.connectionId

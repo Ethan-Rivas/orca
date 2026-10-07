@@ -1,3 +1,4 @@
+import { withClaudeProfileTerminalEnv } from '../../../claude-accounts/claude-profile-installed-router'
 import {
   isWslShellName,
   resolveLocalWindowsTerminalRuntimeOptions
@@ -249,5 +250,9 @@ export async function preparePtyIpcSpawnPreflight(ctx: PtyIpcSpawnState): Promis
         pinnedClaudeAccountId
       )
     : null
+  // Why not pinned: the routed pointer would send a pinned pane's `claude` back to the selected account.
+  if (!ctx.claudeAuth?.pinnedAccountId) {
+    args.env = withClaudeProfileTerminalEnv(args.env, args.connectionId, initialSelectionTarget)
+  }
   ctx.spawnTiming.mark('auth')
 }

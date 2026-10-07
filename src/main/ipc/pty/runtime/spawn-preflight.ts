@@ -43,6 +43,7 @@ import { clearProviderPtyState } from '../provider/state-cleanup'
 import { awaitExplicitPiOmpGuestReadiness } from '../../../agent-hooks/wsl-pi-omp-guest-readiness'
 import type { RuntimePtySpawnState } from './spawn-state'
 import {
+  applyRuntimeClaudeProfileTerminalEnv,
   isRuntimeClaudeLaunch,
   prepareRuntimeSpawnClaudeAuth,
   resolveRuntimeSpawnClaudeAccount
@@ -151,6 +152,7 @@ export async function prepareRuntimePtySpawn(
   // notifyResumeUnavailable — runtime/relay panes start fresh without the notice.
   ctx.launchCommand = codexResumeLaunch.command
   ctx.claudeAuth = await prepareRuntimeSpawnClaudeAuth(ctx, pinnedClaudeAccountId)
+  applyRuntimeClaudeProfileTerminalEnv(ctx)
   if (ctx.isClaudeLaunch && !ctx.claudeAuth?.pinnedAccountId && isClaudeAuthSwitchInProgress()) {
     throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
   }
@@ -175,7 +177,8 @@ export async function prepareRuntimePtySpawn(
       worktreeId: args.worktreeId,
       tabId: args.tabId,
       leafId: args.leafId,
-      ...(args.expectedSourceBinding ? { expectedSourceBinding: args.expectedSourceBinding } : {})
+      ...(args.expectedSourceBinding ? { expectedSourceBinding: args.expectedSourceBinding } : {}),
+      ...(args.placement ? { placement: args.placement } : {})
     }
   }
   const sshScopedEnv = stripRemotePaneEnvWhenHooksDisabled(args.connectionId, args.env)
