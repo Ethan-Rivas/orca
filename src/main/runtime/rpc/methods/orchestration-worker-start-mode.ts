@@ -60,7 +60,10 @@ export function decideWorkerStartMode(args: {
       ...(args.params.account ? { claudeAccount: args.params.account } : {})
     },
     settings: args.settings,
-    vocabulary: WORKER_START_VOCABULARY
+    vocabulary: WORKER_START_VOCABULARY,
+    // The structured worker factory creates Claude and Codex only; any other agent (Grok included)
+    // starts as a terminal worker until structured workers take registered agents.
+    registeredStructuredAgents: []
   })
 }
 
