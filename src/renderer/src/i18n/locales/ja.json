@@ -17464,11 +17464,6 @@
       },
       "native": {
         "chat": {
-          "NativeChatStructuredSession": {
-            "1f772bb5d0": "メッセージの配信は未確認です。",
-            "93ef441197": "メッセージは送信されませんでした。",
-            "a5e7f14068": "再試行"
-          },
           "NativeChatLaunchRetry": {
             "failed": "チャットを開始できませんでした。",
             "unknown": "チャット接続が確認できませんでした。",
@@ -17739,6 +17734,8 @@
         "cannotRunHere": "Orca はここでこの Agent をチャットで実行できません。",
         "unreachable": "Orca は Agent に接続できませんでした。",
         "recordFailed": "Orca はこれをチャットの履歴に保存できませんでした。",
+        "attachmentExpired": "この添付ファイルは期限切れです。",
+        "reattachFile": "削除してから、もう一度添付してください。",
         "conversationCleared": "この会話はクリアされました。",
         "openCurrentConversation": "続けるには、現在の会話を開いてください。",
         "clearUnfinished": "前回の /clear は完了しませんでした。",
@@ -17782,6 +17779,9 @@
         "stopDictation": "ディクテーションを停止する",
         "noSkills": "一致するスキルがありません",
         "localAttachmentUnsupported": "ローカル添付ファイルはリモートセッションでは使用できません。",
+        "attachFailed": "{{files}} を添付できませんでした。",
+        "attachFailedBecause": "{{files}} を添付できませんでした。{{reason}}",
+        "uploadingFile": "{{name}} をアップロードしています…",
         "removeAttachment": "添付ファイルを削除する",
         "pastedImageLabel": "貼り付けた画像",
         "draftNotSaved": "この下書きはまだ保存できていません。Orca は保存を再試行し続けます。",
@@ -18202,10 +18202,8 @@
         "turnOffQueueing": "キューへの追加をオフにする",
         "withdrawnHold": "送信前に停止されました",
         "pausedSendFailed": "送信できませんでした。「送信」を押して再試行してください。",
-        "pausedKept": "まだ送信されていません。「送信」を押すと送信されます。",
         "paused": "一時停止中",
         "queuePausedStopped": "中断したため、キューを一時停止しました",
-        "queuePausedCleared": "会話を消去したため、キューを一時停止しました",
         "queuePaused": "キューは一時停止中です",
         "resume": "再開",
         "sendConfirmTitle": "メッセージを送信しますか？",
@@ -18583,6 +18581,13 @@
       "label": "担当者",
       "automatic": "自動",
       "assignToMe": "自分に割り当てる（{{name}}）"
+    },
+    "markdown-callout": {
+      "note": "メモ",
+      "tip": "ヒント",
+      "important": "重要",
+      "warning": "警告",
+      "caution": "注意"
     }
   },
   "dashboardPopout": {
