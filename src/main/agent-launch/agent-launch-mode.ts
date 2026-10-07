@@ -180,9 +180,14 @@ export function decideAgentLaunchMode(args: {
  * can create a structured session there at all. Asked before anything is created, so a refusal
  * becomes a terminal agent rather than a failed launch.
  */
+export type AgentLaunchModeHostRuntime = Pick<
+  OrcaRuntimeService,
+  'getStructuredAgentSessionCreateSupport'
+> &
+  Partial<Pick<OrcaRuntimeService, 'listRepos'>>
+
 export async function resolveAgentLaunchModeOnHost(
-  runtime: Pick<OrcaRuntimeService, 'getStructuredAgentSessionCreateSupport'> &
-    Partial<Pick<OrcaRuntimeService, 'listRepos'>>,
+  runtime: AgentLaunchModeHostRuntime,
   receipt: AgentLaunchModeReceipt,
   worktreeId: string | undefined,
   agent: TuiAgent | undefined,
@@ -251,7 +256,7 @@ async function readStructuredCreateSupport(
 
 /**
  * Applies the executing host's `agentSession.createSupport` answer, which is the authority on WSL,
- * remoteness and the Windows process-start-time gate for the resolved workspace.
+ * remoteness and per-agent support for the resolved workspace.
  */
 export function downgradeAgentLaunchModeForHost(
   receipt: AgentLaunchModeReceipt,
