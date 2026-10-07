@@ -27,6 +27,7 @@ import { isTuiAgent } from '../../shared/tui-agent-config'
 import { isWorkspaceKey, worktreeWorkspaceKey } from '../../shared/workspace-scope'
 import { printLineageSummary } from './worktree-lineage-summary'
 import { readClaudeLaunchAccountFlag } from './claude-launch-account-flag'
+import { projectWorktreePsTerminalVerdict } from '../worktree-ps-terminal-verdict'
 import {
   assertWorkspaceTargetFlagsCompatible,
   hasWorkspaceProjectTarget,
@@ -144,7 +145,10 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       { limit: getOptionalPositiveIntegerFlag(flags, 'limit') }
     )
     await annotateOmittedHostScope(client, result.result)
-    printResult(result, json, formatWorktreePs)
+    const worktrees = result.result.worktrees.map(projectWorktreePsTerminalVerdict)
+    printResult({ ...result, result: { ...result.result, worktrees } }, json, () =>
+      formatWorktreePs(result.result)
+    )
   },
   'worktree list': async ({ flags, client, json }) => {
     const result = await client.call<WithAnnotatedHostScope<RuntimeWorktreeListResult>>(

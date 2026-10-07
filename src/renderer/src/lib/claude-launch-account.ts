@@ -1,3 +1,5 @@
+import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
+import type { LaunchAgentInNewTabArgs } from '@/lib/launch-agent-in-new-tab'
 import type { Repo } from '../../../shared/repo-types'
 import type { SleepingAgentLaunchConfig } from '../../../shared/agent-session-resume'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
@@ -58,4 +60,19 @@ export function stampClaudeLaunchAccount(
     return config
   }
   return withClaudeLaunchAccount(config, resolveLaunchClaudeAccountId(repo, launch.claudeAccountId))
+}
+
+/** A retry is a new user action, so it mints its own request id and replans the route. */
+export function relaunchWithClaudeAccount(
+  launch: (args: LaunchAgentInNewTabArgs) => unknown,
+  args: LaunchAgentInNewTabArgs
+): (claudeAccountId?: string) => void {
+  return (override) => {
+    launch({
+      ...args,
+      requestId: newAgentLaunchRequestId(),
+      agentSessionLaunchPlan: undefined,
+      ...(override ? { claudeAccountId: override } : {})
+    })
+  }
 }
