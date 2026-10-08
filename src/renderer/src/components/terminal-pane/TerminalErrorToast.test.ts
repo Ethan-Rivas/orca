@@ -461,9 +461,9 @@ describe('TerminalErrorToast environment footer', () => {
     )
   })
 
-  it('shows the friendly message and a "Start on active account" button for a tagged host-sessions refusal', () => {
+  it('shows the friendly message and a "Start on active account" button for a tagged account-missing refusal', () => {
     const onStartOnActiveAccount = vi.fn()
-    const error = claudePinnedLaunchError('host-sessions', 'refused').message
+    const error = claudePinnedLaunchError('account-missing', 'refused').message
     const view = render(
       React.createElement(TerminalErrorToast, {
         error,
@@ -473,7 +473,7 @@ describe('TerminalErrorToast environment footer', () => {
     )
 
     expect(view.container.textContent).toContain(
-      'This Claude account is still used by terminals started while it was the active account.'
+      'The saved Claude account for this project is no longer signed in.'
     )
     expect(view.container.querySelector('a')).toBeNull()
     fireEvent.click(view.getByRole('button', { name: 'Start on active account' }))

@@ -1,5 +1,4 @@
 import { rejectPaneSpawnReservation, reserveIdlePaneSpawn } from '../pane/spawn-reservation'
-import { releasePinnedClaudeReservation } from '../claude-pinned-spawn'
 import { ptySizes } from '../delivery/visibility-state'
 import {
   beginPtyIpcSpawn,
@@ -104,7 +103,5 @@ export async function runPtyIpcSpawn(deps: PtySpawnIpcDeps, args: PtySpawnIpcArg
   } finally {
     ctx.releaseWorktreeSpawn?.()
     ctx.finishTerminalInstall()
-    // Why last: a committed pinned PTY is registered by now, so its account never reads as unused.
-    releasePinnedClaudeReservation(ctx.claudeAuth)
   }
 }

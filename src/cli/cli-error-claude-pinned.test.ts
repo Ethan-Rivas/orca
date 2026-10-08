@@ -8,12 +8,11 @@ it('prints a pinned Claude refusal without the renderer marker', () => {
     ok: false,
     error: {
       code: 'runtime_error',
-      message:
-        'Claude account a@b.c is still in use. [claude_pinned:host-sessions email=a%40b.c terminals=1]'
+      message: 'That Claude account no longer exists. [claude_pinned:account-missing]'
     },
     _meta: { runtimeId: 'runtime-1' }
   })
   const output = formatCliError(error)
-  expect(output).toContain('Claude account a@b.c is still in use.')
+  expect(output).toContain('That Claude account no longer exists.')
   expect(output).not.toContain('claude_pinned')
 })

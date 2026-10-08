@@ -63,29 +63,17 @@ type RefusedPaneReplay = {
 }
 
 /**
- * Restarts only the refused pane, keeping its prompt, args and resume session, so split siblings
- * keep running. Returns false when no refused spawn was recorded for the pane.
+ * Restarts only the refused pane on the active account, keeping its prompt, args and resume
+ * session, so split siblings keep running. Without a recorded spawn it opens a new tab instead.
  */
-export function replayRefusedClaudeLaunch(
-  input: RefusedPaneReplay & { onActiveAccount: boolean }
-): boolean {
-  const refused = input.refusedStartups.get(input.paneId)
-  input.refusedStartups.delete(input.paneId)
-  if (!refused) {
-    return false
-  }
-  input.restartPane(
-    input.paneId,
-    input.onActiveAccount ? withActiveClaudeAccount(refused) : refused
-  )
-  return true
-}
-
-/** Without a recorded spawn to replay in place, opens a new tab instead. */
 export function startRefusedPaneOnActiveClaudeAccount(
   input: RefusedPaneReplay & { openNewTab: () => void }
 ): void {
-  if (!replayRefusedClaudeLaunch({ ...input, onActiveAccount: true })) {
+  const refused = input.refusedStartups.get(input.paneId)
+  input.refusedStartups.delete(input.paneId)
+  if (!refused) {
     input.openNewTab()
+    return
   }
+  input.restartPane(input.paneId, withActiveClaudeAccount(refused))
 }

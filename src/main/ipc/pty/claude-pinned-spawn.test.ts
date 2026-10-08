@@ -2,24 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClaudeRuntimeAuthPreparation } from '../../claude-accounts/runtime-auth-service'
 
 const mocks = vi.hoisted(() => ({
-  markClaudePtySpawned: vi.fn(),
-  markPinnedClaudePtySpawned: vi.fn(),
-  releaseClaudePinnedAccountReservation: vi.fn()
+  markPinnedClaudePtySpawned: vi.fn()
 }))
 
-vi.mock('../../claude-accounts/live-pty-gate', () => ({
-  markClaudePtySpawned: mocks.markClaudePtySpawned
-}))
 vi.mock('../../claude-accounts/claude-pinned-pty-registry', () => ({
-  markPinnedClaudePtySpawned: mocks.markPinnedClaudePtySpawned,
-  releaseClaudePinnedAccountReservation: mocks.releaseClaudePinnedAccountReservation
+  markPinnedClaudePtySpawned: mocks.markPinnedClaudePtySpawned
 }))
 
 import {
   isFreshClaudeLaunch,
   preparePinnableClaudeAuth,
-  markClaudePtySpawnedForAuth,
-  releasePinnedClaudeReservation
+  markClaudePtySpawnedForAuth
 } from './claude-pinned-spawn'
 
 beforeEach(() => {
@@ -33,7 +26,7 @@ function makeAuth(
     configDir: '/tmp/claude',
     envPatch: {},
     stripAuthEnv: false,
-    provenance: 'managed:acct-1',
+    provenance: 'profile:acct-1',
     ...overrides
   }
 }
@@ -97,56 +90,26 @@ describe('preparePinnableClaudeAuth', () => {
   })
 
   it('accepts a pinned-provenance result for the requested account', async () => {
-    const auth = makeAuth({ provenance: 'managed:acct-1:pinned', pinnedAccountId: 'acct-1' })
+    const auth = makeAuth({ provenance: 'profile:acct-1:pinned', pinnedAccountId: 'acct-1' })
     const prepare = vi.fn().mockResolvedValue(auth)
     await expect(preparePinnableClaudeAuth(prepare, {}, 'acct-1')).resolves.toBe(auth)
     expect(prepare).toHaveBeenCalledWith({}, { accountId: 'acct-1' })
   })
 
   it('rejects a result whose provenance is for a different account', async () => {
-    const prepare = vi.fn().mockResolvedValue(makeAuth({ provenance: 'managed:acct-2' }))
+    const prepare = vi.fn().mockResolvedValue(makeAuth({ provenance: 'profile:acct-2' }))
     await expect(preparePinnableClaudeAuth(prepare, {}, 'acct-1')).rejects.toThrow(
       'Orca could not prepare the requested Claude account for this launch. Check `orca account list` and retry.'
     )
-    expect(mocks.releaseClaudePinnedAccountReservation).not.toHaveBeenCalled()
-  })
-
-  it('releases the reservation of a mismatched pinned preparation before refusing', async () => {
-    const prepare = vi
-      .fn()
-      .mockResolvedValue(
-        makeAuth({ provenance: 'managed:acct-2:pinned', pinnedAccountId: 'acct-2' })
-      )
-    await expect(preparePinnableClaudeAuth(prepare, {}, 'acct-1')).rejects.toThrow(
-      '[claude_pinned:provenance]'
-    )
-    expect(mocks.releaseClaudePinnedAccountReservation).toHaveBeenCalledWith('acct-2')
   })
 })
 
 describe('markClaudePtySpawnedForAuth', () => {
-  it('marks a pinned PTY against its pinned account', () => {
+  it('labels a pinned PTY with its account and leaves an unpinned one alone', () => {
     markClaudePtySpawnedForAuth('pty-1', makeAuth({ pinnedAccountId: 'acct-1' }))
+    markClaudePtySpawnedForAuth('pty-2', makeAuth())
+    markClaudePtySpawnedForAuth('pty-3', null)
+    expect(mocks.markPinnedClaudePtySpawned).toHaveBeenCalledTimes(1)
     expect(mocks.markPinnedClaudePtySpawned).toHaveBeenCalledWith('pty-1', 'acct-1')
-    expect(mocks.markClaudePtySpawned).not.toHaveBeenCalled()
-  })
-
-  it('marks a non-pinned PTY against the live gate with its provenance', () => {
-    markClaudePtySpawnedForAuth('pty-2', makeAuth({ provenance: 'managed:acct-1' }))
-    expect(mocks.markClaudePtySpawned).toHaveBeenCalledWith('pty-2', 'managed:acct-1')
-    expect(mocks.markPinnedClaudePtySpawned).not.toHaveBeenCalled()
-  })
-})
-
-describe('releasePinnedClaudeReservation', () => {
-  it('releases a pinned reservation', () => {
-    releasePinnedClaudeReservation(makeAuth({ pinnedAccountId: 'acct-1' }))
-    expect(mocks.releaseClaudePinnedAccountReservation).toHaveBeenCalledWith('acct-1')
-  })
-
-  it('does nothing for an unpinned or missing auth', () => {
-    releasePinnedClaudeReservation(makeAuth())
-    releasePinnedClaudeReservation(null)
-    expect(mocks.releaseClaudePinnedAccountReservation).not.toHaveBeenCalled()
   })
 })

@@ -21,10 +21,8 @@ import {
 } from '../host-env/fresh-spawn-routing'
 import { stripRemotePaneEnvWhenHooksDisabled } from '../provider/liveness'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import { isClaudeAuthSwitchInProgress } from '../../../claude-accounts/live-pty-gate'
 import {
   CLAUDE_AUTH_ENV_CONFLICT_MESSAGE,
-  CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE,
   hasClaudeAuthEnvConflict
 } from '../../../claude-accounts/environment'
 import {
@@ -131,10 +129,6 @@ export async function prepareRuntimePtySpawn(
   )
   const pinnedClaudeAccountId = resolveRuntimeSpawnClaudeAccount(ctx)
   ctx.isClaudeLaunch = isRuntimeClaudeLaunch(ctx, pinnedClaudeAccountId)
-  // Why exempt: a switch never touches a pinned account; preparation re-reads it in the switch's queue.
-  if (ctx.isClaudeLaunch && !pinnedClaudeAccountId && isClaudeAuthSwitchInProgress()) {
-    throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
-  }
   const codexResumePreparation = ctx.preAdoptedStablePane
     ? null
     : ctx.deps.prepareCodexResumeHome({
@@ -153,9 +147,6 @@ export async function prepareRuntimePtySpawn(
   ctx.launchCommand = codexResumeLaunch.command
   ctx.claudeAuth = await prepareRuntimeSpawnClaudeAuth(ctx, pinnedClaudeAccountId)
   applyRuntimeClaudeProfileTerminalEnv(ctx)
-  if (ctx.isClaudeLaunch && !ctx.claudeAuth?.pinnedAccountId && isClaudeAuthSwitchInProgress()) {
-    throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
-  }
   if (ctx.claudeAuth?.stripAuthEnv && hasClaudeAuthEnvConflict(args.env)) {
     throw new Error(CLAUDE_AUTH_ENV_CONFLICT_MESSAGE)
   }

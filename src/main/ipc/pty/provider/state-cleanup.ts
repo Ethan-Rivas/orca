@@ -1,7 +1,7 @@
 import { advertisedUrlWatcher } from '../../../ports/advertised-url-watcher'
 import { unregisterPty } from '../../../memory/pty-registry'
-import { markClaudePtyExited } from '../../../claude-accounts/live-pty-gate'
 import { forgetCodexPaneAccount } from '../../../codex/codex-pane-account-registry'
+import { markPinnedClaudePtyExited } from '../../../claude-accounts/claude-pinned-pty-registry'
 import { openCodeHookService } from '../../../opencode/hook-service'
 import { piTitlebarExtensionService } from '../../../pi/titlebar-extension-service'
 import { agentHookServer } from '../../../agent-hooks/server'
@@ -41,16 +41,15 @@ export function clearProviderPtyState(
     agentSessionOwners.release(id)
     // Why: the launch-account record outlives the app, so only a real teardown
     // may drop it — a disconnect that can reconnect is not a death, and a reused
-    // id must never inherit a dead pane's Codex account.
+    // id must never inherit a dead pane's Codex or pinned Claude account.
     forgetCodexPaneAccount(id)
+    markPinnedClaudePtyExited(id)
   }
   // Why: OpenCode and Pi both allocate PTY-scoped runtime state outside the
   // node-pty process table. Centralizing provider cleanup avoids drift where a
   // new teardown path forgets to remove one provider's overlay/hook state.
   openCodeHookService.clearPty(id)
   piTitlebarExtensionService.clearPty(id)
-  // Why: SSH exit/teardown paths bypass pty.ts's local onExit but still must release Claude account-switch guards.
-  markClaudePtyExited(id)
   ptySizes.delete(id)
   ptyIncarnationById.delete(id)
   lastInputAtByPty.delete(id)

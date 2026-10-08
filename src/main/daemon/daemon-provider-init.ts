@@ -1,9 +1,5 @@
 import { getLocalPtyProvider, rebindLocalProviderListeners } from '../ipc/pty'
 import {
-  confirmSeededClaudeLivePtys,
-  hasSeededUnconfirmedClaudePtys
-} from '../claude-accounts/live-pty-gate'
-import {
   confirmSeededPinnedClaudePtys,
   hasSeededUnconfirmedPinnedClaudePtys
 } from '../claude-accounts/claude-pinned-pty-registry'
@@ -167,7 +163,7 @@ export async function initDaemonPtyProvider(
   if (process.platform === 'darwin' && newSpawner.getHandle()?.adopted) {
     void reportDaemonAdoption(runtimeDir, info.socketPath, info.tokenPath, newAdapter)
   }
-  await reconcileSeededClaudeLivePtys(routedAdapter)
+  await reconcileSeededPinnedClaudePtys(routedAdapter)
 }
 
 // Why off the init path: this is measurement of an adopted daemon (#17696), and neither its probes nor their failure may delay or fail startup.
@@ -195,9 +191,9 @@ async function reportDaemonAdoption(
   }
 }
 
-// Why: release gate ids only for daemon-confirmed-dead sessions; keep seeds on listing failure since releasing early can rotate a live CLI's refresh token.
-async function reconcileSeededClaudeLivePtys(provider: DaemonProvider): Promise<void> {
-  if (!hasSeededUnconfirmedClaudePtys() && !hasSeededUnconfirmedPinnedClaudePtys()) {
+// Why: drop restored `--account` labels only for sessions the daemon confirmed dead; a failed listing keeps them.
+async function reconcileSeededPinnedClaudePtys(provider: DaemonProvider): Promise<void> {
+  if (!hasSeededUnconfirmedPinnedClaudePtys()) {
     return
   }
   try {
@@ -207,16 +203,14 @@ async function reconcileSeededClaudeLivePtys(provider: DaemonProvider): Promise<
         : [provider]
     const results = await Promise.allSettled(adapters.map((entry) => entry.listSessions()))
     if (results.some((result) => result.status === 'rejected')) {
-      console.warn('[daemon] Keeping seeded Claude live-PTY gate — session listing failed')
       return
     }
-    const aliveSessionIds = results.flatMap((result) =>
-      result.status === 'fulfilled' ? result.value.map((session) => session.sessionId) : []
+    confirmSeededPinnedClaudePtys(
+      results.flatMap((result) =>
+        result.status === 'fulfilled' ? result.value.map((session) => session.sessionId) : []
+      )
     )
-    confirmSeededClaudeLivePtys(aliveSessionIds)
-    confirmSeededPinnedClaudePtys(aliveSessionIds)
   } catch (error) {
-    // Why: gate bookkeeping must never fail daemon init; stale seeds only defer a usage refresh until next restart.
-    console.warn('[daemon] Failed to reconcile seeded Claude live-PTY gate:', error)
+    console.warn('[daemon] Failed to reconcile restored pinned Claude PTYs:', error)
   }
 }

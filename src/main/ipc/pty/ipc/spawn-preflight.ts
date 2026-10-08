@@ -4,8 +4,6 @@ import {
   resolveLocalWindowsTerminalRuntimeOptions
 } from '../../../../shared/local-windows-terminal-runtime'
 import { isWslUncPath, toWindowsWslPath } from '../../../../shared/wsl-paths'
-import { isClaudeAuthSwitchInProgress } from '../../../claude-accounts/live-pty-gate'
-import { CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE } from '../../../claude-accounts/environment'
 import { mintPtySessionId } from '../../../daemon/pty-session-id'
 import { resolveWslSessionContext } from '../../../daemon/wsl-session-context'
 import { LocalPtyProvider } from '../../../providers/local-pty-provider'
@@ -239,10 +237,6 @@ export async function preparePtyIpcSpawnPreflight(ctx: PtyIpcSpawnState): Promis
     { ...args, preAdoptedStablePane: Boolean(ctx.preAdoptedStablePane) },
     pinnedClaudeAccountId
   )
-  // Why exempt: a switch never touches a pinned account; preparation re-reads it in the switch's queue.
-  if (ctx.isClaudeLaunch && !pinnedClaudeAccountId && isClaudeAuthSwitchInProgress()) {
-    throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
-  }
   ctx.claudeAuth = ctx.isClaudeLaunch
     ? await preparePinnableClaudeAuth(
         ctx.deps.prepareClaudeAuth,

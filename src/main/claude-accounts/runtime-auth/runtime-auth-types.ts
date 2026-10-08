@@ -1,4 +1,3 @@
-import type { ClaudeManagedAccount } from '../../../shared/managed-account-types'
 import type { ClaudeEnvPatch } from '../environment'
 
 export type ClaudeRuntimeAuthPreparation = {
@@ -8,55 +7,14 @@ export type ClaudeRuntimeAuthPreparation = {
   wslLinuxConfigDir?: string | null
   envPatch: ClaudeEnvPatch
   stripAuthEnv: boolean
-  managedRefreshDeferredByLivePty?: boolean
-  /** Set only by a `--account` launch on a non-active host account; see runtime-auth-pinned-launch. */
+  /** Set only by a `--account` launch on a host account that is not the selected one. */
   pinnedAccountId?: string
   provenance: string
+  /** Usage only: why the selected account cannot be read; usage polling must not throw for it. */
+  usageError?: string
 }
 
 export type ClaudeLaunchAuthOptions = {
-  /** A managed host account the launch must run on, whether or not it is the active one. */
+  /** A managed host account the launch must run on, whether or not it is the selected one. */
   accountId?: string
 }
-
-export type ClaudeSystemDefaultSnapshot = {
-  credentialsJson: string | null
-  configOauthAccount: unknown
-  keychainCredentialsJson: string | null
-  scopedKeychainCredentialsJson?: string | null
-  legacyKeychainCredentialsJson?: string | null
-  scopedKeychainCredentialsCaptured?: boolean
-  legacyKeychainCredentialsCaptured?: boolean
-  capturedAt: number
-}
-
-export type ClaudeAuthIdentity = {
-  accountUuid: string | null
-  email: string | null
-  organizationUuid: string | null
-}
-
-export type ClaudeReadBackResult =
-  | { status: 'unchanged' | 'persisted' }
-  | {
-      status: 'rejected'
-      runtimeCredentialsChanged: boolean
-      hasValidChangedRuntimeCredentials: boolean
-      runtimeCredentialsJson?: string
-    }
-export type ClaudeReadBackMatch =
-  | { kind: 'matched'; account: ClaudeManagedAccount; managedCredentialsJson: string }
-  | { kind: 'none' | 'ambiguous' }
-export type ClaudeKeychainReadResult =
-  | { status: 'captured'; credentialsJson: string | null }
-  | { status: 'failed' }
-export type ClaudeKeychainSnapshotValue =
-  | { status: 'captured'; credentialsJson: string | null }
-  | { status: 'unknown' }
-export type ClaudeRefreshTokenComparison = 'same' | 'different' | 'missing'
-export type ClaudeRuntimeCredentialCandidate = {
-  credentialsJson: string
-  runtimeOauthAccount: unknown
-}
-
-export const RUNTIME_OAUTH_ACCOUNT_PARSE_ERROR = Symbol('runtime-oauth-account-parse-error')

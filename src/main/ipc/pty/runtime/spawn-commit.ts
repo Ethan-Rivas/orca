@@ -135,8 +135,6 @@ async function commitReservedRuntimePtySpawn(ctx: RuntimePtySpawnState) {
       agentSessionEnsure: ctx.result.agentSessionEnsure
     }
   }
-  // Why here: first step past the adopted branch, so a later throw cannot leave this live PTY
-  // unregistered after the run releases its pinned reservation.
   if (ctx.isClaudeLaunch && !ctx.stablePaneOwner) {
     markRuntimeClaudePtySpawned(ctx.result.id, ctx.claudeAuth)
   }

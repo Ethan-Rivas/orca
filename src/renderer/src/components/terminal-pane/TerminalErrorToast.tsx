@@ -227,7 +227,6 @@ export function TerminalErrorToast({
   onDismiss,
   onRestartDaemon,
   onRetry,
-  onRetryLaunch,
   onStartOnActiveAccount
 }: {
   error: string
@@ -236,8 +235,6 @@ export function TerminalErrorToast({
   onDismiss: () => void
   onRestartDaemon?: () => void
   onRetry?: () => Promise<boolean>
-  /** Relaunches a refused pinned Claude spawn as-is, for refusals that clear on their own. */
-  onRetryLaunch?: () => void
   onStartOnActiveAccount?: () => void
 }): React.JSX.Element {
   const ssh = isSshError(error)
@@ -248,7 +245,6 @@ export function TerminalErrorToast({
   const showStartOnActiveAccount = Boolean(
     pinnedLaunch?.offerActiveAccount && onStartOnActiveAccount
   )
-  const showRetryLaunch = Boolean(pinnedLaunch?.offerRetry && onRetryLaunch)
   const showDaemonRestart = !ssh && onRestartDaemon && shouldOfferDaemonRestart(error)
   // Restart cannot recover a session after its owning daemon exits.
   const showIssueLink =
@@ -404,11 +400,6 @@ export function TerminalErrorToast({
             {retrying
               ? translate('auto.components.terminal.pane.TerminalErrorToast.retrying', 'Retrying…')
               : translate('auto.components.terminal.pane.TerminalErrorToast.retry', 'Retry')}
-          </Button>
-        ) : null}
-        {showRetryLaunch ? (
-          <Button variant="outline" size="xs" onClick={onRetryLaunch} className="ml-3">
-            {translate('auto.components.terminal.pane.TerminalErrorToast.retry', 'Retry')}
           </Button>
         ) : null}
         {showStartOnActiveAccount ? (

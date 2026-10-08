@@ -5,11 +5,10 @@ import type { PtyPaneStartup } from './pty-connection-types'
 import {
   recordRefusedClaudeLaunchStartup,
   redirectsPtylessPaneActivation,
-  replayRefusedClaudeLaunch,
   startRefusedPaneOnActiveClaudeAccount
 } from './refused-claude-launch-recovery'
 
-const refusal = claudePinnedLaunchError('host-sessions', 'Account in use.').message
+const refusal = claudePinnedLaunchError('account-missing', 'Account missing.').message
 
 const resumedStartup: NonNullable<PtyPaneStartup> = {
   command: 'claude --resume s-1',
@@ -58,16 +57,6 @@ describe('Start on active account after a refused pinned launch', () => {
 
     expect(openNewTab).toHaveBeenCalledTimes(1)
     expect(restartPane).not.toHaveBeenCalled()
-  })
-
-  it('retries the refused spawn unchanged in its own pane', () => {
-    const refusedStartups = new Map([[2, resumedStartup]])
-    const restartPane = vi.fn()
-
-    expect(
-      replayRefusedClaudeLaunch({ paneId: 2, refusedStartups, restartPane, onActiveAccount: false })
-    ).toBe(true)
-    expect(restartPane).toHaveBeenCalledWith(2, resumedStartup)
   })
 })
 

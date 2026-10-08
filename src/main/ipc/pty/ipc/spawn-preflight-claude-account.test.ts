@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ACTIVE_CLAUDE_ACCOUNT } from '../../../../shared/claude/project-claude-account-preference'
 import type { ClaudeRuntimeAuthPreparation } from '../../../claude-accounts/runtime-auth-service'
-import { CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE } from '../../../claude-accounts/environment'
-import { beginClaudeAuthSwitch, endClaudeAuthSwitch } from '../../../claude-accounts/live-pty-gate'
+import { installClaudeProfileRouter } from '../../../claude-accounts/claude-profile-installed-router'
+import type { ClaudeProfileRouter } from '../../../claude-accounts/claude-profile-router'
+import { CLAUDE_PROFILE_POINTER_ENV } from '../../../../shared/claude-profile-routing'
 import { registerSshPtyProvider, unregisterSshPtyProvider } from '../provider/registry'
 import { preparePtyIpcSpawnPreflight } from './spawn-preflight'
-import { assemblePtyIpcSpawnEnv } from './spawn-env'
 import { createPtyIpcSpawnState, type PtyIpcSpawnState } from './spawn-state'
 import type { AdoptStablePaneResult, PtySpawnIpcArgs, PtySpawnIpcDeps } from './spawn-types'
 
@@ -14,10 +13,10 @@ vi.mock('electron', () => ({ app: { getPath: () => '/tmp', isPackaged: false } }
 const WORKTREE_ID = 'repo-1::/work/repo-1'
 
 const PINNED_PREPARATION: ClaudeRuntimeAuthPreparation = {
-  configDir: '/managed/acct-1',
-  envPatch: { CLAUDE_CONFIG_DIR: '/managed/acct-1' },
+  configDir: '/profiles/acct-1/home',
+  envPatch: { CLAUDE_CONFIG_DIR: '/profiles/acct-1/home' },
   stripAuthEnv: true,
-  provenance: 'managed:acct-1:pinned',
+  provenance: 'profile:acct-1:pinned',
   pinnedAccountId: 'acct-1'
 }
 
@@ -55,7 +54,7 @@ function buildPreflightCtx(input: {
 
 describe('renderer pty spawn preflight: project Claude account', () => {
   afterEach(() => {
-    endClaudeAuthSwitch()
+    installClaudeProfileRouter(undefined)
     unregisterSshPtyProvider('ssh-1')
   })
 
@@ -100,28 +99,22 @@ describe('renderer pty spawn preflight: project Claude account', () => {
     expect(prepareClaudeAuth).not.toHaveBeenCalled()
   })
 
-  it('does not block a pinned launch on a global switch in progress through env assembly', async () => {
+  it("keeps the selected account's pointer off a pinned pane but not off an unpinned one", async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: terminal env assembly only calls terminalEnv on the installed router.
+    installClaudeProfileRouter({
+      terminalEnv: () => ({ [CLAUDE_PROFILE_POINTER_ENV]: '/profiles/selected-host' })
+    } as unknown as ClaudeProfileRouter)
     const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
-    beginClaudeAuthSwitch()
     const pinned = buildPreflightCtx({
       args: { command: 'claude', launchAgent: 'claude' },
       prepareClaudeAuth
     })
-    const unpinned = buildPreflightCtx({
-      args: {
-        command: 'claude',
-        launchAgent: 'claude',
-        launchConfig: { agentArgs: '', agentEnv: {}, claudeAccountId: ACTIVE_CLAUDE_ACCOUNT }
-      },
-      prepareClaudeAuth
-    })
+    const unpinned = buildPreflightCtx({ args: { command: 'zsh' }, prepareClaudeAuth })
 
-    await expect(preparePtyIpcSpawnPreflight(pinned)).resolves.toBeUndefined()
-    await expect(assemblePtyIpcSpawnEnv(pinned)).resolves.toBeUndefined()
-    await expect(preparePtyIpcSpawnPreflight(unpinned)).rejects.toThrow(
-      CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE
-    )
-    expect(pinned.claudeAuth?.pinnedAccountId).toBe('acct-1')
-    expect(pinned.baseEnv?.CLAUDE_CONFIG_DIR).toBe('/managed/acct-1')
+    await preparePtyIpcSpawnPreflight(pinned)
+    await preparePtyIpcSpawnPreflight(unpinned)
+
+    expect(pinned.args.env?.[CLAUDE_PROFILE_POINTER_ENV]).toBeUndefined()
+    expect(unpinned.args.env?.[CLAUDE_PROFILE_POINTER_ENV]).toBe('/profiles/selected-host')
   })
 })

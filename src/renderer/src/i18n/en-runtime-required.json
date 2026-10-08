@@ -2525,15 +2525,8 @@
         "pane": {
           "ClaudePinnedLaunch": {
             "accountMissing": "The saved Claude account for this project is no longer signed in. Change it in Settings → Repository, or start on the active account.",
-            "becameActive": "That account just became the active account. Try again.",
-            "credentials": "This Claude account needs to sign in again. Re-authenticate it in Settings → Accounts.",
-            "hostMutation": "Claude accounts are being updated. Try again in a moment.",
-            "hostSessions": "This Claude account is still used by terminals started while it was the active account. Close them, or start on the active account this time.",
-            "hostSessionsDetail_one": "{{email}} is still used by {{count}} Claude terminal started while it was the active account. Close it, or start on the active account this time.",
-            "hostSessionsDetail_other": "{{email}} is still used by {{count}} Claude terminals started while it was the active account. Close them, or start on the active account this time.",
             "provenance": "Couldn't confirm the Claude account for this session, so it wasn't started.",
-            "unsupportedHost": "A saved Claude account can't be used in WSL yet. Start on the active account, or set this project's account to Default in Settings → Repository.",
-            "usageFetch": "Checking account usage took too long. Try again."
+            "unsupportedHost": "A saved Claude account can't be used in WSL yet. Start on the active account, or set this project's account to Default in Settings → Repository."
           },
           "CloseTerminalDialog": {
             "6b9a6975f8": "The terminal still has a running process. If you close the terminal, the process will be killed.",
@@ -2853,6 +2846,8 @@
         "chooseClaudeAccount": "Choose or add one in Claude Accounts settings.",
         "chooseClaudeAccountThenRunCommand": "Choose or add one in Claude Accounts settings, then run /{{command}} again.",
         "chooseClaudeAccountThenSend": "Choose or add one in Claude Accounts settings, then send your message again.",
+        "claudeAccountFolderMissing": "The selected Claude account's folder is missing. Sign in to it again or choose another account.",
+        "claudeAccountSetupFailed": "The selected Claude account could not be set up. Try again or choose another account.",
         "commandRefused": "This command didn't run.",
         "commandRefusedTryAgain": "This command didn't run. Try it again.",
         "compactionFailed": "Compaction failed.",

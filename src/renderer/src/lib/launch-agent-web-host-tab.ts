@@ -53,12 +53,7 @@ function toastWebHostLaunchFailure(
           ),
           onClick: () => relaunch(ACTIVE_CLAUDE_ACCOUNT)
         }
-      : pinned.offerRetry
-        ? {
-            label: translate('auto.components.terminal.pane.TerminalErrorToast.retry', 'Retry'),
-            onClick: () => relaunch()
-          }
-        : undefined
+      : undefined
   toast.error(pinned.message, action ? { action } : undefined)
 }
 

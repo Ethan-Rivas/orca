@@ -1,10 +1,6 @@
 import { isClaudeLaunchCommand } from './host-env/fresh-spawn-routing'
 import { claudePinnedLaunchError } from '../../../shared/claude/claude-pinned-launch-error'
-import { markClaudePtySpawned } from '../../claude-accounts/live-pty-gate'
-import {
-  markPinnedClaudePtySpawned,
-  releaseClaudePinnedAccountReservation
-} from '../../claude-accounts/claude-pinned-pty-registry'
+import { markPinnedClaudePtySpawned } from '../../claude-accounts/claude-pinned-pty-registry'
 import type { PrepareClaudeAuth } from './host-env/types'
 import type { ClaudeRuntimeAuthPreparation } from '../../claude-accounts/runtime-auth-service'
 import type { ClaudeAccountSelectionTarget } from '../../claude-accounts/runtime-selection'
@@ -47,13 +43,11 @@ export async function preparePinnableClaudeAuth(
     return prepare(target)
   }
   const claudeAuth = await prepare(target, { accountId: pinnedAccountId })
-  // Why: the active path (`managed:<id>`) also honours the request; any other account must not run.
+  // Why: the selected account's path (`profile:<id>`) also honours the request; no other may run.
   if (
-    claudeAuth.provenance !== `managed:${pinnedAccountId}:pinned` &&
-    claudeAuth.provenance !== `managed:${pinnedAccountId}`
+    claudeAuth.provenance !== `profile:${pinnedAccountId}:pinned` &&
+    claudeAuth.provenance !== `profile:${pinnedAccountId}`
   ) {
-    // Why: the caller never sees this preparation, so its spawn finally cannot release the hold.
-    releasePinnedClaudeReservation(claudeAuth)
     throw claudePinnedLaunchError(
       'provenance',
       'Orca could not prepare the requested Claude account for this launch. Check `orca account list` and retry.'
@@ -67,17 +61,6 @@ export function markClaudePtySpawnedForAuth(
   claudeAuth: ClaudeRuntimeAuthPreparation | null
 ): void {
   if (claudeAuth?.pinnedAccountId) {
-    // Why: a pinned PTY guards its own account, not the active one the global gate defers.
     markPinnedClaudePtySpawned(ptyId, claudeAuth.pinnedAccountId)
-    return
-  }
-  markClaudePtySpawned(ptyId, claudeAuth?.provenance)
-}
-
-export function releasePinnedClaudeReservation(
-  claudeAuth: ClaudeRuntimeAuthPreparation | null
-): void {
-  if (claudeAuth?.pinnedAccountId) {
-    releaseClaudePinnedAccountReservation(claudeAuth.pinnedAccountId)
   }
 }

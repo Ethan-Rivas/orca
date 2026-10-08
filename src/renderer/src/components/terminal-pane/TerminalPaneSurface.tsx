@@ -1,4 +1,6 @@
 import { createPortal } from 'react-dom'
+import { TerminalPaneFileDropOwner } from './TerminalPaneFileDropOwner'
+import { makePaneKey } from '../../../../shared/stable-pane-id'
 import TerminalSearch from '@/components/TerminalSearch'
 import { DaemonActionDialog } from '@/components/shared/useDaemonActions'
 import { AgentSessionContinuationDialog } from '@/components/agent-session-continuation/AgentSessionContinuationDialog'
@@ -8,7 +10,6 @@ import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../../shared/claude/project-claude-account-preference'
 import {
   refusedClaudeLaunchStartupsFor,
-  replayRefusedClaudeLaunch,
   startRefusedPaneOnActiveClaudeAccount
 } from './refused-claude-launch-recovery'
 import CloseTerminalDialog from './CloseTerminalDialog'
@@ -132,7 +133,7 @@ export function TerminalPaneSurface({
       <div
         ref={setContainerRef}
         className="absolute inset-0 min-h-0 min-w-0"
-        data-native-file-drop-target="terminal"
+        data-os-file-drop-boundary=""
         data-terminal-tab-id={tabId}
         data-terminal-chat-view={effectiveChatViewMode && activePaneIsChatLeaf ? 'true' : undefined}
         data-terminal-layout-leaf-ids={expectedLayoutLeafIdsAttr}
@@ -174,6 +175,17 @@ export function TerminalPaneSurface({
           })
         }}
       />
+      {managedPanes.map((pane) => (
+        <TerminalPaneFileDropOwner
+          key={makePaneKey(tabId, pane.leafId)}
+          pane={pane}
+          tabId={tabId}
+          worktreeId={worktreeId}
+          cwd={cwd}
+          managerRef={managerRef}
+          paneTransportsRef={paneTransportsRef}
+        />
+      ))}
       <TerminalPaneCodexRestartPortals controller={controller} />
       <AgentLaunchPaneNoticePortal
         refusal={visibleLaunchRefusal}
@@ -190,17 +202,6 @@ export function TerminalPaneSurface({
               paneOnClient={paneOnClient}
               onDismiss={dismissTerminalError}
               onRestartDaemon={() => daemonActions.setPending('restart')}
-              onRetryLaunch={() => {
-                const replayed = replayRefusedClaudeLaunch({
-                  paneId: activePane.id,
-                  refusedStartups: refusedClaudeLaunchStartupsFor(paneTransportsRef),
-                  restartPane: restartPaneWithStartup,
-                  onActiveAccount: false
-                })
-                if (!replayed) {
-                  dismissTerminalError()
-                }
-              }}
               onStartOnActiveAccount={() =>
                 startRefusedPaneOnActiveClaudeAccount({
                   paneId: activePane.id,

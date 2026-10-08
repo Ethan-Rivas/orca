@@ -30,8 +30,6 @@ export async function commitPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawn
 
 async function commitReservedPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawnResult> {
   const args = ctx.args
-  // Why first: the run's finally releases a pinned reservation, so a later commit step that throws
-  // must not leave this live PTY unregistered; a failed persist's cleanup marks it exited again.
   if (ctx.isClaudeLaunch && !ctx.stablePaneOwner) {
     markClaudePtySpawnedForAuth(ctx.result.id, ctx.claudeAuth)
   }

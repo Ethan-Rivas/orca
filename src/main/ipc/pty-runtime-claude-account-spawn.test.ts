@@ -2,11 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { spawnMock } from './pty-ipc-mock-registry'
 import { setupPtyIpcSuite } from './pty-ipc-test-harness'
 import { registerPtyHandlers, registerSshPtyProvider } from './pty'
-import { hasLiveClaudePtys, markClaudePtyExited } from '../claude-accounts/live-pty-gate'
 import {
   _internals as pinnedRegistryInternals,
-  countClaudePinnedAccountUsers,
-  hasLivePinnedClaudePtys
+  getPinnedClaudeAccountIdForPty
 } from '../claude-accounts/claude-pinned-pty-registry'
 import type { ClaudeRuntimeAuthPreparation } from '../claude-accounts/runtime-auth-service'
 import type { Store } from '../persistence'
@@ -82,19 +80,19 @@ const ACTIVE_PREPARATION: ClaudeRuntimeAuthPreparation = {
   wslLinuxConfigDir: null,
   envPatch: {},
   stripAuthEnv: true,
-  provenance: 'managed:acct-a'
+  provenance: 'profile:acct-a'
 }
 
-const PINNED_DIR = '/userData/claude-accounts/acct-b/auth'
+const PINNED_DIR = '/userData/claude-profiles/acct-b/home'
 const PINNED_PREPARATION: ClaudeRuntimeAuthPreparation = {
   configDir: PINNED_DIR,
   runtime: 'host',
   wslDistro: null,
   wslLinuxConfigDir: null,
-  envPatch: { CLAUDE_CONFIG_DIR: PINNED_DIR, CLAUDE_SECURESTORAGE_CONFIG_DIR: PINNED_DIR },
+  envPatch: { CLAUDE_CONFIG_DIR: PINNED_DIR, ORCA_CLAUDE_INJECTED_CONFIG_DIR: PINNED_DIR },
   stripAuthEnv: true,
   pinnedAccountId: 'acct-b',
-  provenance: 'managed:acct-b:pinned'
+  provenance: 'profile:acct-b:pinned'
 }
 
 function storeWithRepo(claude: ProjectClaudeAccountPreference): Store {
@@ -151,10 +149,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
     return spawnMock.mock.calls.at(-1)![2].env as Record<string, string>
   }
 
-  function cleanup(ids: string[]): void {
-    for (const id of ids) {
-      markClaudePtyExited(id)
-    }
+  function cleanup(): void {
     pinnedRegistryInternals.reset()
   }
 
@@ -163,7 +158,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
     const controller = registerRuntimeController(prepareClaudeAuth)
     const args = { cols: 80, rows: 24, worktreeId: 'wt-1', command: 'claude', env: { KEEP: '1' } }
 
-    const plain = await controller.spawn(args)
+    await controller.spawn(args)
     const plainEnv = lastSpawnEnv()
     const plainSpawnOptions = { ...spawnMock.mock.calls.at(-1)![2], env: undefined }
     // Why: `--account` naming the host's active account resolves to the same preparation, so any
@@ -174,7 +169,6 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
       expect(prepareClaudeAuth.mock.calls[0]).toHaveLength(1)
       expect(prepareClaudeAuth.mock.calls[1]?.[1]).toEqual({ accountId: 'acct-a' })
       expect(plainEnv).not.toHaveProperty('CLAUDE_CONFIG_DIR')
-      expect(plainEnv).not.toHaveProperty('CLAUDE_SECURESTORAGE_CONFIG_DIR')
       expect(plainEnv.KEEP).toBe('1')
       const withoutPerSpawnIds = (env: Record<string, string>) =>
         Object.fromEntries(
@@ -184,14 +178,13 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
         )
       expect(withoutPerSpawnIds(activePinnedEnv)).toEqual(withoutPerSpawnIds(plainEnv))
       expect({ ...spawnMock.mock.calls.at(-1)![2], env: undefined }).toEqual(plainSpawnOptions)
-      expect(hasLiveClaudePtys()).toBe(true)
-      expect(countClaudePinnedAccountUsers('acct-a')).toBe(0)
+      expect(getPinnedClaudeAccountIdForPty(activePinned.id)).toBeUndefined()
     } finally {
-      cleanup([plain.id, activePinned.id])
+      cleanup()
     }
   })
 
-  it('spawns a pinned Claude on the managed dir and tracks it per account', async () => {
+  it("spawns a pinned Claude in the account's folder and labels its PTY", async () => {
     const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
     const controller = registerRuntimeController(prepareClaudeAuth)
 
@@ -205,21 +198,18 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
     try {
       const env = lastSpawnEnv()
       expect(env.CLAUDE_CONFIG_DIR).toBe(PINNED_DIR)
-      expect(env.CLAUDE_SECURESTORAGE_CONFIG_DIR).toBe(PINNED_DIR)
+      expect(env.ORCA_CLAUDE_INJECTED_CONFIG_DIR).toBe(PINNED_DIR)
       expect(prepareClaudeAuth).toHaveBeenCalledWith({ runtime: 'host' }, { accountId: 'acct-b' })
-      expect(hasLiveClaudePtys()).toBe(false)
-      expect(hasLivePinnedClaudePtys('acct-b')).toBe(true)
-      markClaudePtyExited(spawned.id)
-      expect(hasLivePinnedClaudePtys('acct-b')).toBe(false)
+      expect(getPinnedClaudeAccountIdForPty(spawned.id)).toBe('acct-b')
     } finally {
-      cleanup([spawned.id])
+      cleanup()
     }
   })
 
   it('treats a gated setup launch as Claude when the agent id says so', async () => {
     const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
     const controller = registerRuntimeController(prepareClaudeAuth)
-    const spawned = await controller.spawn({
+    await controller.spawn({
       cols: 80,
       rows: 24,
       worktreeId: 'wt-1',
@@ -231,7 +221,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
       expect(prepareClaudeAuth).toHaveBeenCalledTimes(1)
       expect(lastSpawnEnv().CLAUDE_CONFIG_DIR).toBe(PINNED_DIR)
     } finally {
-      cleanup([spawned.id])
+      cleanup()
     }
   })
 
@@ -265,7 +255,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
   it('refuses to launch when the prepared account is not the requested one', async () => {
     const prepareClaudeAuth = vi.fn(async () => ({
       ...ACTIVE_PREPARATION,
-      provenance: 'managed:acct-c'
+      provenance: 'profile:acct-c'
     }))
     const controller = registerRuntimeController(prepareClaudeAuth)
     const spawnsBefore = spawnMock.mock.calls.length
@@ -281,14 +271,9 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
     expect(spawnMock.mock.calls.length).toBe(spawnsBefore)
   })
 
-  it('keeps the env-conflict refusal and releases the reservation of a failed spawn', async () => {
-    const prepareClaudeAuth = vi.fn(async () => {
-      // Mirrors the service: preparation reserves the account for the spawn to release.
-      const { reserveClaudePinnedAccount } =
-        await import('../claude-accounts/claude-pinned-pty-registry')
-      reserveClaudePinnedAccount('acct-b')
-      return PINNED_PREPARATION
-    })
+  it('keeps the env-conflict refusal for a pinned launch and labels nothing', async () => {
+    const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
+    const spawnsBefore = spawnMock.mock.calls.length
     const controller = registerRuntimeController(prepareClaudeAuth)
     try {
       await expect(
@@ -301,9 +286,9 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
           claudeAccountId: 'acct-b'
         })
       ).rejects.toThrow(/explicit Anthropic auth environment variables/)
-      expect(countClaudePinnedAccountUsers('acct-b')).toBe(0)
+      expect(spawnMock.mock.calls.length).toBe(spawnsBefore)
     } finally {
-      cleanup([])
+      cleanup()
     }
   })
 })
