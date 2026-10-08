@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, realpathSync, writeFileSync } from 'node:fs'
+import { mkdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import type { Page } from '@stablyai/playwright-test'
 import { expect, test } from './helpers/orca-app'
@@ -36,27 +36,9 @@ async function saveScreenshot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, `${name}.png`) })
 }
 
-function writeManagedAuthDir(userDataDir: string, account: typeof WORK | typeof PERSONAL): string {
-  const authDir = path.join(userDataDir, 'claude-accounts', account.id, 'auth')
-  mkdirSync(authDir, { recursive: true, mode: 0o700 })
-  writeFileSync(path.join(authDir, '.orca-managed-claude-auth'), `${account.id}\n`)
-  writeFileSync(
-    path.join(authDir, '.credentials.json'),
-    JSON.stringify({
-      claudeAiOauth: {
-        email: account.email,
-        accessToken: `fake-access-${account.id}`,
-        refreshToken: `fake-refresh-${account.id}`,
-        // Far future so nothing attempts an OAuth refresh with the fake token.
-        expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000
-      }
-    })
-  )
-  writeFileSync(
-    path.join(authDir, 'oauth-account.json'),
-    `${JSON.stringify({ accountUuid: account.id, emailAddress: account.email })}\n`
-  )
-  return realpathSync(authDir)
+// A pinned launch runs Claude from the account's own folder, which Orca sets up on first use.
+function accountHome(userDataDir: string, accountId: string): string {
+  return path.join(userDataDir, 'claude-profiles', accountId, 'home')
 }
 
 async function startClaudeFromTabBar(page: Page): Promise<void> {
@@ -119,7 +101,7 @@ async function closeSettings(page: Page): Promise<void> {
 test.describe('Per-project Claude account', () => {
   test.skip(
     process.platform === 'darwin',
-    'macOS keeps managed Claude credentials in the login Keychain, which the e2e harness does not isolate'
+    "Not verified on macOS, where Claude keeps each account folder's sign-in in the login Keychain"
   )
   test.skip(
     process.platform === 'win32',
@@ -138,7 +120,7 @@ test.describe('Per-project Claude account', () => {
     const managedAccounts = [WORK, PERSONAL].map((account) => ({
       id: account.id,
       email: account.email,
-      managedAuthPath: writeManagedAuthDir(userDataDir, account),
+      managedAuthPath: accountHome(userDataDir, account.id),
       managedAuthRuntime: 'host' as const,
       authMethod: 'subscription-oauth' as const,
       organizationUuid: null,
@@ -147,7 +129,7 @@ test.describe('Per-project Claude account', () => {
       updatedAt: 1,
       lastAuthenticatedAt: Date.now()
     }))
-    const personalAuthDir = managedAccounts[1].managedAuthPath
+    const personalHome = (): string => realpathSync(accountHome(userDataDir, PERSONAL.id))
     const repoId = await orcaPage.evaluate(
       async ({ accounts, override, id }) => {
         const state = window.__store!.getState()
@@ -209,7 +191,7 @@ test.describe('Per-project Claude account', () => {
       await prompt.getByRole('button', { name: 'Start' }).click()
       await expect(prompt).toBeHidden()
 
-      expect(await waitForLaunchedConfigDir(orcaPage, before)).toBe(personalAuthDir)
+      expect(await waitForLaunchedConfigDir(orcaPage, before)).toBe(personalHome())
       await saveScreenshot(orcaPage, 'c-pinned-claude-terminal-output')
       const saved = await orcaPage.evaluate(
         (id) => window.__store!.getState().repos.find((repo) => repo.id === id)?.agentAccounts,
@@ -225,7 +207,7 @@ test.describe('Per-project Claude account', () => {
     await test.step('the next launch reuses the account without prompting', async () => {
       const before = await activeTabId(orcaPage)
       await startClaudeFromTabBar(orcaPage)
-      expect(await waitForLaunchedConfigDir(orcaPage, before)).toBe(personalAuthDir)
+      expect(await waitForLaunchedConfigDir(orcaPage, before)).toBe(personalHome())
       await expect(prompt).toBeHidden()
 
       const trigger = orcaPage
@@ -280,9 +262,7 @@ test.describe('Per-project Claude account', () => {
         .toBe(true)
       expect(await activeTabId(orcaPage)).toBe(refusedTabId)
       const configDir = await waitForConfigDirOutput(orcaPage)
-      expect(configDir.startsWith(realpathSync(path.join(userDataDir, 'claude-accounts')))).toBe(
-        false
-      )
+      expect(configDir.startsWith(path.join(userDataDir, 'claude-profiles'))).toBe(false)
       await expect(startOnActive).toBeHidden()
       await expect(orcaPage.getByText(refusalMessage, { exact: false })).toBeHidden()
       await saveScreenshot(orcaPage, 'e2-started-on-active-account')
