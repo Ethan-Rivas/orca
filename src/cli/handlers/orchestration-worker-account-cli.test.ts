@@ -15,6 +15,7 @@ describe('orchestration worker-start --account', () => {
   })
 
   const invokeWorkerStart = (flags: Map<string, string | boolean>) =>
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: worker-start reads only flags, client.call, cwd and json.
     ORCHESTRATION_HANDLERS['orchestration worker-start']({
       flags,
       client: { call: callMock },

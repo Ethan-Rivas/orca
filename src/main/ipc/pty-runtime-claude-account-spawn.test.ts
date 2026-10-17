@@ -130,7 +130,9 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
       onPtyData: vi.fn()
     }
     registerPtyHandlers(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the suite's mock window stands in for the BrowserWindow these handlers only send to.
       mainWindow as never,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: registration reads only the runtime members stubbed above.
       runtime as never,
       undefined,
       undefined,
@@ -144,6 +146,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
   }
 
   function lastSpawnEnv(): Record<string, string> {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every spawn in this suite passes a string env map.
     return spawnMock.mock.calls.at(-1)![2].env as Record<string, string>
   }
 

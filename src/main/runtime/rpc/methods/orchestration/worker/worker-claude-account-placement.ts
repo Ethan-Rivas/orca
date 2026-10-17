@@ -1,4 +1,3 @@
-import type { OrcaRuntimeService } from '../../../../orca-runtime'
 import { OrchestrationError } from '../../../../orchestration/orchestration-error'
 
 /**
@@ -6,7 +5,9 @@ import { OrchestrationError } from '../../../../orchestration/orchestration-erro
  * No worktree id means no `--account` or a worktree this start creates, which is checked there.
  */
 export async function assertClaudeAccountWorktreeIsLocal(
-  runtime: Pick<OrcaRuntimeService, 'showTerminalWorkspaceLaunchScope'>,
+  runtime: {
+    showTerminalWorkspaceLaunchScope(selector: string): Promise<{ connectionId?: string | null }>
+  },
   worktreeId: string | undefined
 ): Promise<void> {
   if (!worktreeId) {

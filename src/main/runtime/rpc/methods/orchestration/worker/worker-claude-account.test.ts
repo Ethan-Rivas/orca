@@ -40,6 +40,7 @@ function prepare(params: Record<string, unknown>) {
   return prepareLocalWorkerStart({
     params: WorkerStartParams.parse({ task: 'task_1', from: 'term_coord', ...params }),
     createsWorktree: false,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: prepareLocalWorkerStart reads only the account roster the fake runtime provides.
     runtime: createRuntime() as never
   })
 }
@@ -112,15 +113,13 @@ describe('worker-start --account', () => {
   it('refuses an SSH workspace placement', async () => {
     await expect(
       assertClaudeAccountWorktreeIsLocal(
-        {
-          showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: 'ssh-1' }))
-        } as never,
+        { showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: 'ssh-1' })) },
         'wt-1'
       )
     ).rejects.toThrow(/SSH workspace/)
     await expect(
       assertClaudeAccountWorktreeIsLocal(
-        { showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: null })) } as never,
+        { showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: null })) },
         'wt-1'
       )
     ).resolves.toBeUndefined()
