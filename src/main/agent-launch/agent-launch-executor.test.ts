@@ -100,8 +100,9 @@ function harness(options: {
     return options.terminalPromptDelivered ?? true
   })
   const runtime = {
-    getClientSettings: () =>
-      options.settings === undefined ? STRUCTURED_PREFERENCE : options.settings,
+    requireStore: () => ({
+      getSettings: () => (options.settings === undefined ? STRUCTURED_PREFERENCE : options.settings)
+    }),
     getStructuredAgentSessionCreateSupport,
     listRepos: () => options.repos ?? []
   }
@@ -400,17 +401,20 @@ describe('a launch into a workspace that already exists', () => {
     expect(result.worktreeId).toBe('wt-7')
   })
 
-  it('reuses a running terminal without creating or asking', async () => {
-    const h = harness({})
-    const result = await h.run({
-      agent: 'claude',
-      target: { kind: 'existing', worktree: 'wt-7' },
-      reuseTerminal: { handle: 'term_live' }
-    })
-    expect(h.calls).toEqual([])
-    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_live' })
-    expect(result.receipt).toMatchObject({ mode: 'terminal', reason: 'reused_terminal' })
-  })
+  it.each(['claude', 'grok'] as const)(
+    'reuses a running %s terminal without creating or asking',
+    async (agent) => {
+      const h = harness({})
+      const result = await h.run({
+        agent,
+        target: { kind: 'existing', worktree: 'wt-7' },
+        reuseTerminal: { handle: 'term_live' }
+      })
+      expect(h.calls).toEqual([])
+      expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_live' })
+      expect(result.receipt).toMatchObject({ mode: 'terminal', reason: 'reused_terminal' })
+    }
+  )
 })
 
 describe('a launch into a project with a saved Claude account', () => {

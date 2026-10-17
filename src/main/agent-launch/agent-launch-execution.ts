@@ -10,9 +10,9 @@ import type {
   AgentLaunchResult,
   AgentLaunchTarget
 } from '../../shared/agent-launch-intent'
-import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type {
   AgentLaunchModeHostRuntime,
+  readAgentLaunchModeSettings,
   AgentLaunchModeReceipt,
   AgentLaunchModeVocabulary
 } from './agent-launch-mode'
@@ -30,7 +30,7 @@ import type {
 export type AgentLaunchPublishedSurface = AgentLaunchResult
 
 type AgentLaunchExecutionBase = {
-  runtime: AgentLaunchModeHostRuntime & Pick<OrcaRuntimeService, 'getClientSettings'>
+  runtime: AgentLaunchModeHostRuntime & Parameters<typeof readAgentLaunchModeSettings>[0]
   vocabulary?: AgentLaunchModeVocabulary
   /** False when the calling client cannot show the agent's chat; absent for the host's own callers. */
   callerRendersStructured?: boolean

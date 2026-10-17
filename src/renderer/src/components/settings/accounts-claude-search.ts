@@ -67,5 +67,21 @@ export const getAccountsClaudeSearchEntries = createLocalizedCatalog(() => [
       ...translateSearchKeyword('auto.components.settings.accounts.search.f2d666a886', 'optional')
     ]
   },
-  getAskClaudeAccountPerProjectSearchEntry()
+  getAskClaudeAccountPerProjectSearchEntry(),
+  {
+    title: translate(
+      'accounts.claude.switchSessions.settingTitle',
+      'When you switch accounts while Claude is running'
+    ),
+    description: translate(
+      'accounts.claude.switchSessions.settingDescription',
+      'Restarting continues each running conversation on the new account.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.accounts.search.e14049e1a8', 'claude'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.5b3f18ef4a', 'switch'),
+      ...translateSearchKeyword('accounts.claude.switchSessions.keyword.restart', 'restart'),
+      ...translateSearchKeyword('accounts.claude.switchSessions.keyword.running', 'running')
+    ]
+  }
 ])
