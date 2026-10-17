@@ -6,6 +6,7 @@ import {
   markClaudePtySpawnedForAuth
 } from '../claude-pinned-spawn'
 import { resolveProjectClaudeAccount } from '../../../claude-accounts/project-claude-account-resolution'
+import { isPinnableClaudeAccountId } from '../../../../shared/claude/project-claude-account-preference'
 import type { RuntimePtySpawnState } from './spawn-state'
 
 /**
@@ -19,7 +20,8 @@ export function resolveRuntimeSpawnClaudeAccount(ctx: RuntimePtySpawnState): str
     return undefined
   }
   const explicit = ctx.args.claudeAccountId
-  if (explicit) {
+  // Why: the active sentinel is a soft choice, never an account to pin.
+  if (explicit && isPinnableClaudeAccountId(explicit)) {
     if (ctx.args.connectionId) {
       throw new Error('Claude --account launches are not supported for SSH workspaces.')
     }

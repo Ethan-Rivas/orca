@@ -86,8 +86,8 @@ export class ClaudeRuntimeAuthService {
     }
     if (getSelectedClaudeAccountIdForTarget(settings, { runtime: 'host' }) === accountId) {
       const preparation = await this.router.prepareLaunch()
-      // Why: a selected account with no login of its own runs on System default, which holds its login.
-      return preparation.provenance === 'system'
+      // Why rechecked: the selection can move while prepareLaunch waits for the login shell's env.
+      return preparation.provenance === 'system' && this.router.coveredBySystemDefault(accountId)
         ? { ...preparation, provenance: `profile:${accountId}` }
         : preparation
     }

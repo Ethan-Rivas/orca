@@ -11,6 +11,7 @@ const fakes = vi.hoisted(() => ({
   ),
   host: {
     prepareLaunch: vi.fn(async () => ({ provenance: 'profile:acct-a' })),
+    coveredBySystemDefault: vi.fn(() => true),
     publish: () => {}
   }
 }))
@@ -89,6 +90,12 @@ describe('ClaudeRuntimeAuthService --account launch', () => {
     const auth = await service().prepareForClaudeLaunch(undefined, { accountId: 'acct-a' })
 
     expect(auth).toEqual({ provenance: 'profile:acct-a' })
+
+    fakes.host.prepareLaunch.mockResolvedValueOnce({ provenance: 'system' })
+    fakes.host.coveredBySystemDefault.mockReturnValueOnce(false)
+    await expect(
+      service().prepareForClaudeLaunch(undefined, { accountId: 'acct-a' })
+    ).resolves.toEqual({ provenance: 'system' })
   })
 
   it('refuses a missing account and a WSL account before touching any folder', async () => {
