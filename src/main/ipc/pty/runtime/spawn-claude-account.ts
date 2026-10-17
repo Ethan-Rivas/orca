@@ -81,10 +81,6 @@ export function markRuntimeClaudePtySpawned(
 /** Skips pinned panes: the routed pointer would send their `claude` back to the selected account. */
 export function applyRuntimeClaudeProfileTerminalEnv(ctx: RuntimePtySpawnState): void {
   if (!ctx.claudeAuth?.pinnedAccountId) {
-    ctx.args.env = withClaudeProfileTerminalEnv(
-      ctx.args.env,
-      ctx.args.connectionId,
-      ctx.codexSelectionTarget
-    )
+    ctx.args.env = withClaudeProfileTerminalEnv(ctx.args.env, ctx.codexSelectionTarget)
   }
 }

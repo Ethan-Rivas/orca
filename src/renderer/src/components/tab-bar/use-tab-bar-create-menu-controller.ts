@@ -8,6 +8,7 @@ import {
   shouldQueueTerminalFocusAfterMenuClose
 } from '@/lib/launch-agent-in-new-tab'
 import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
+import { captureNativeChatComposerFocusIntent } from '@/components/native-chat/use-native-chat-composer-reveal-focus'
 import type { WindowsTerminalCapabilities } from '@/lib/windows-terminal-capabilities'
 import { useAppStore } from '../../store'
 import { launchWithClaudeAccountChoice } from '../claude-account-prompt/choose-claude-launch-account'
@@ -198,15 +199,18 @@ export function useTabBarCreateMenuController({
       case 'new-simulator':
       case 'go-to-simulator':
         onNewSimulatorTab?.()
-        break
     }
   }
   const launchAgentFromNewTabEntry = (agent: TuiAgent): void => {
+    const option = agentLaunchOptions.find((candidate) => candidate.agent === agent)
+    // Why captured before the account prompt: the prompt itself takes focus.
+    const focusIntent = captureNativeChatComposerFocusIntent()
     // Why: after the account prompt the menu has already closed, so the queued focus must run now.
     const afterDeferredLaunch = runPendingNewTabMenuFocusAfterClose
     launchWithClaudeAccountChoice(agent, { worktreeId, afterDeferredLaunch }, (claudeAccountId) => {
       const result = launchAgentInNewTab({
         requestId: newAgentLaunchRequestId(),
+        focusIntent,
         agent,
         worktreeId,
         groupId: resolvedGroupId,
@@ -218,7 +222,7 @@ export function useTabBarCreateMenuController({
           translate(
             'auto.components.tab.bar.TabBar.ab589350e5',
             'Could not build launch command for {{value0}}.',
-            { value0: agentLaunchOptions.find((entry) => entry.agent === agent)?.label ?? agent }
+            { value0: option?.label ?? agent }
           )
         )
         return

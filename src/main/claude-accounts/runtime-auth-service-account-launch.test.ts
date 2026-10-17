@@ -4,11 +4,13 @@ import type { GlobalSettings } from '../../shared/global-settings-types'
 import type { ClaudeManagedAccount } from '../../shared/managed-account-types'
 
 const fakes = vi.hoisted(() => ({
+  prepareClaudePinnedAccountLaunch: vi.fn(
+    async (_router: unknown, _dataRoot: string, accountId: string) => ({
+      provenance: `profile:${accountId}:pinned`
+    })
+  ),
   host: {
     prepareLaunch: vi.fn(async () => ({ provenance: 'profile:acct-a' })),
-    prepareAccountLaunch: vi.fn(
-      async (accountId: string) => `/data/claude-profiles/${accountId}/home`
-    ),
     publish: () => {}
   }
 }))
@@ -21,7 +23,13 @@ vi.mock('./claude-profile-router', () => ({
     return fakes.host
   }
 }))
-vi.mock('./claude-profile-installed-router', () => ({ installClaudeProfileRouter: () => {} }))
+vi.mock('./claude-pinned-account-launch', () => ({
+  prepareClaudePinnedAccountLaunch: fakes.prepareClaudePinnedAccountLaunch
+}))
+vi.mock('./claude-profile-installed-router', () => ({
+  installClaudeProfileRouter: () => {},
+  installClaudeWslProfileRouter: () => {}
+}))
 
 import { ClaudeRuntimeAuthService } from './runtime-auth-service'
 
@@ -57,28 +65,30 @@ afterEach(() => {
 })
 
 describe('ClaudeRuntimeAuthService --account launch', () => {
-  it('runs an account that is not the selected one from its own folder, with no pointer', async () => {
+  it('runs an account that is not the selected one on its own pinned preparation', async () => {
     const auth = await service().prepareForClaudeLaunch(undefined, { accountId: 'acct-b' })
 
-    expect(fakes.host.prepareAccountLaunch).toHaveBeenCalledWith('acct-b')
-    expect(auth).toMatchObject({
-      configDir: '/data/claude-profiles/acct-b/home',
-      envPatch: {
-        CLAUDE_CONFIG_DIR: '/data/claude-profiles/acct-b/home',
-        ORCA_CLAUDE_INJECTED_CONFIG_DIR: '/data/claude-profiles/acct-b/home'
-      },
-      stripAuthEnv: true,
-      pinnedAccountId: 'acct-b',
-      provenance: 'profile:acct-b:pinned'
-    })
-    expect(auth.envPatch).not.toHaveProperty('ORCA_CLAUDE_PROFILE_POINTER')
+    expect(fakes.prepareClaudePinnedAccountLaunch).toHaveBeenCalledWith(
+      fakes.host,
+      '/data',
+      'acct-b'
+    )
+    expect(auth).toEqual({ provenance: 'profile:acct-b:pinned' })
   })
 
   it('sends the selected account down the normal launch path', async () => {
     const auth = await service().prepareForClaudeLaunch(undefined, { accountId: 'acct-a' })
 
     expect(auth).toEqual({ provenance: 'profile:acct-a' })
-    expect(fakes.host.prepareAccountLaunch).not.toHaveBeenCalled()
+    expect(fakes.prepareClaudePinnedAccountLaunch).not.toHaveBeenCalled()
+  })
+
+  it('names the selected account when System default holds its login', async () => {
+    fakes.host.prepareLaunch.mockResolvedValueOnce({ provenance: 'system' })
+
+    const auth = await service().prepareForClaudeLaunch(undefined, { accountId: 'acct-a' })
+
+    expect(auth).toEqual({ provenance: 'profile:acct-a' })
   })
 
   it('refuses a missing account and a WSL account before touching any folder', async () => {
@@ -89,6 +99,6 @@ describe('ClaudeRuntimeAuthService --account launch', () => {
     await expect(auth.prepareForClaudeLaunch(undefined, { accountId: 'acct-w' })).rejects.toThrow(
       '[claude_pinned:unsupported-host]'
     )
-    expect(fakes.host.prepareAccountLaunch).not.toHaveBeenCalled()
+    expect(fakes.prepareClaudePinnedAccountLaunch).not.toHaveBeenCalled()
   })
 })

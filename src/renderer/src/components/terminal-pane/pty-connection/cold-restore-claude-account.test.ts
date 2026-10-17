@@ -62,7 +62,8 @@ function coldRestoreAccountId(record: SleepingAgentSessionRecord): string | unde
     connectionId: null,
     executionHostId: null,
     worktree: { path: '/repo' },
-    shellOverride: undefined
+    shellOverride: undefined,
+    transport: { getRuntimeEnvironmentId: () => null }
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the cold-restore builder reads only the fields set above.
   const typedSession = session as unknown as ConnectPanePtySession

@@ -7,6 +7,15 @@ import type { AppState } from '@/store/types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { getIndexedRepoMap, getIndexedWorktreeById } from '@/store/worktree-repo-index'
 import { claudeAccountPinningUnsupportedReasonInState } from '@/components/settings/repository-claude-account'
+import { runtimeTargetForRepoOwner } from '@/lib/repo-runtime-owner'
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
+
+/** Where a project's Claude accounts live: its owner host; a repo with no row reads this app's. */
+export function claudeAccountsTargetForRepo(
+  repo: Pick<Repo, 'id' | 'connectionId' | 'executionHostId'> | undefined
+): RuntimeClientTarget {
+  return (repo && runtimeTargetForRepoOwner({ repos: [repo] }, repo.id)) ?? { kind: 'local' }
+}
 
 export function resolveLaunchClaudeAccountId(
   repo: Pick<Repo, 'agentAccounts'> | undefined,

@@ -3,10 +3,14 @@ import { getAppEnvironment } from '../../shared/app-environment'
 import { toWindowsWslPath } from '../../shared/wsl-paths'
 import { resolveLocalAccountRuntimeTarget } from '../../shared/local-account-runtime'
 import type { Store } from '../persistence'
+import { isWslDistroRunning } from '../wsl-background-distro-gate'
 import { getDefaultWslDistro, getWslHome } from '../wsl'
 import { ClaudeProfileRouter } from './claude-profile-router'
 import { ClaudeWslProfileRouter } from './claude-profile-wsl-router'
-import { installClaudeProfileRouter } from './claude-profile-installed-router'
+import {
+  installClaudeProfileRouter,
+  installClaudeWslProfileRouter
+} from './claude-profile-installed-router'
 import {
   getSelectedClaudeAccountIdForTarget,
   type ClaudeAccountSelectionTarget
@@ -15,8 +19,8 @@ import type {
   ClaudeLaunchAuthOptions,
   ClaudeRuntimeAuthPreparation
 } from './runtime-auth/runtime-auth-types'
-import { CLAUDE_INJECTED_CONFIG_DIR_ENV } from '../../shared/claude-profile-routing'
 import { claudePinnedLaunchError } from '../../shared/claude/claude-pinned-launch-error'
+import { prepareClaudePinnedAccountLaunch } from './claude-pinned-account-launch'
 
 export type {
   ClaudeLaunchAuthOptions,
@@ -33,11 +37,15 @@ export class ClaudeRuntimeAuthService {
   private readonly dataRoot = getAppEnvironment().getPath('userData')
   private mutationQueue: Promise<unknown> = Promise.resolve()
 
-  constructor(private readonly store: Pick<Store, 'getSettings'>) {
+  constructor(
+    private readonly store: Pick<Store, 'getSettings'>,
+    private readonly isDistroRunning: (distro: string) => Promise<boolean> = isWslDistroRunning
+  ) {
     const args = { getSettings: () => store.getSettings(), dataRoot: this.dataRoot }
     this.router = new ClaudeProfileRouter(args)
     installClaudeProfileRouter(this.router)
     this.wslRouter = process.platform === 'win32' ? new ClaudeWslProfileRouter(args) : undefined
+    installClaudeWslProfileRouter(this.wslRouter)
     void this.publishAll().catch((error: unknown) => {
       console.warn('[claude-runtime-auth] Failed to publish the Claude account selection:', error)
     })
@@ -77,25 +85,28 @@ export class ClaudeRuntimeAuthService {
       )
     }
     if (getSelectedClaudeAccountIdForTarget(settings, { runtime: 'host' }) === accountId) {
-      return this.router.prepareLaunch()
+      const preparation = await this.router.prepareLaunch()
+      // Why: a selected account with no login of its own runs on System default, which holds its login.
+      return preparation.provenance === 'system'
+        ? { ...preparation, provenance: `profile:${accountId}` }
+        : preparation
     }
-    const home = await this.router.prepareAccountLaunch(accountId)
-    return {
-      configDir: home,
-      runtime: 'host',
-      wslDistro: null,
-      wslLinuxConfigDir: null,
-      envPatch: { CLAUDE_CONFIG_DIR: home, [CLAUDE_INJECTED_CONFIG_DIR_ENV]: home },
-      stripAuthEnv: true,
-      pinnedAccountId: accountId,
-      provenance: `profile:${accountId}:pinned`
-    }
+    return prepareClaudePinnedAccountLaunch(this.router, this.dataRoot, accountId)
   }
 
   async prepareForRateLimitFetch(
     target?: ClaudeAccountSelectionTarget
   ): Promise<ClaudeRuntimeAuthPreparation> {
     const wsl = this.wslRouteFor(target)
+    // Why: a quota poll is background work and must not boot a stopped distro.
+    if (wsl && !(await this.isDistroRunning(wsl.distro))) {
+      return {
+        configDir: '',
+        envPatch: {},
+        provenance: 'profile:unavailable',
+        usageError: `WSL distro ${wsl.distro} is not running.`
+      }
+    }
     try {
       return await (wsl ? wsl.router.preparation(wsl.distro) : this.router.preparation())
     } catch (error) {
@@ -103,7 +114,6 @@ export class ClaudeRuntimeAuthService {
       return {
         configDir: '',
         envPatch: {},
-        stripAuthEnv: true,
         provenance: 'profile:unavailable',
         usageError: error instanceof Error ? error.message : String(error)
       }

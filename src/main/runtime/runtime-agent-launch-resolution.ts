@@ -4,7 +4,10 @@ import type { TuiAgent } from '../../shared/tui-agent'
 import type { SleepingAgentLaunchConfig } from '../../shared/agent-session-resume'
 import type { ClaudeAgentTeamsMode } from '../../shared/claude-agent-teams-tmux-compat'
 import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
+import {
+  executionRuntimePlatform,
+  remoteExecutionPlatform
+} from '../../shared/agent-launch-runtime'
 import { getTuiAgentLaunchCommand, TUI_AGENT_CONFIG } from '../../shared/tui-agent-config'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
 import { isLaunchConfigClaudeAccountId } from '../../shared/claude/project-claude-account-preference'
@@ -15,13 +18,25 @@ import { isLaunchConfigClaudeAccountId } from '../../shared/claude/project-claud
  */
 export function terminalCreateClaudeAccountIdField(launchOpts: {
   claudeAccountId?: string
+  launchClaudeAccountId?: string
   launchConfig?: Pick<SleepingAgentLaunchConfig, 'claudeAccountId'>
 }): { claudeAccountId?: string; launchConfigClaudeAccountId?: string } {
   if (launchOpts.claudeAccountId) {
     return { claudeAccountId: launchOpts.claudeAccountId }
   }
-  const recorded = launchOpts.launchConfig?.claudeAccountId
+  const recorded = launchOpts.launchConfig?.claudeAccountId ?? launchOpts.launchClaudeAccountId
   return isLaunchConfigClaudeAccountId(recorded) ? { launchConfigClaudeAccountId: recorded } : {}
+}
+
+/** Records the launch's Claude account on its config, so a resume replays it as a saved choice. */
+export function withRecordedClaudeAccount(
+  config: SleepingAgentLaunchConfig | undefined,
+  launchOpts: { claudeAccountId?: string; launchClaudeAccountId?: string; launchAgent?: TuiAgent }
+): SleepingAgentLaunchConfig | undefined {
+  const accountId = launchOpts.claudeAccountId ?? launchOpts.launchClaudeAccountId
+  return config && accountId && launchOpts.launchAgent === 'claude'
+    ? { ...config, claudeAccountId: accountId }
+    : config
 }
 
 export function mergeTerminalEnvDeletionKeys(
@@ -123,14 +138,7 @@ export function getAgentLaunchPlatformForRepo(
   repo: Pick<Repo, 'connectionId' | 'path'>,
   projectRuntime?: ProjectExecutionRuntimeResolution
 ): NodeJS.Platform {
-  if (!repo.connectionId) {
-    if (projectRuntime?.status === 'repair-required') {
-      return projectRuntime.repair.preferredRuntime.kind === 'wsl' ? 'linux' : process.platform
-    }
-    if (projectRuntime?.status === 'resolved' && projectRuntime.runtime.kind === 'wsl') {
-      return 'linux'
-    }
-    return process.platform
-  }
-  return isWindowsAbsolutePathLike(repo.path) ? 'win32' : 'linux'
+  return repo.connectionId
+    ? remoteExecutionPlatform(repo.path)
+    : executionRuntimePlatform(projectRuntime, undefined, process.platform)
 }

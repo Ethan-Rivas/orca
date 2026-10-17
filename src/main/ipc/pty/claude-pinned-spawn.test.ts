@@ -25,7 +25,6 @@ function makeAuth(
   return {
     configDir: '/tmp/claude',
     envPatch: {},
-    stripAuthEnv: false,
     provenance: 'profile:acct-1',
     ...overrides
   }

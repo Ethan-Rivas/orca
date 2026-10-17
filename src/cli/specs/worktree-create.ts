@@ -3,9 +3,10 @@ import { GLOBAL_FLAGS } from '../args'
 
 export const WORKTREE_CREATE_COMMAND_SPEC: CommandSpec = {
   path: ['worktree', 'create'],
+  repeatableFlags: ['reference'],
   summary: 'Create a new Orca-managed worktree',
   usage:
-    'orca worktree create --name <name> [--repo <selector>|--project <id> [--host <host-id>]|--project-host-setup <id>] [--agent <id>] [--account <id|email>] [--prompt <text>] [--setup run|skip|inherit] [--base-branch <ref>] [--issue <number>] [--pr <number>] [--linear-issue <identifier-or-url>] [--gitlab-issue <number-or-url>] [--gitlab-mr <number-or-url>] [--comment <text>] [--parent-worktree <selector>] [--no-parent] [--run-hooks] [--activate] [--json]',
+    'orca worktree create --name <name> [--repo <selector>|--project <id> [--host <host-id>]|--project-host-setup <id>] [--agent <id>] [--account <id|email>] [--prompt <text>] [--model <id>] [--effort <level>] [--setup run|skip|inherit] [--base-branch <ref>] [--reference <url-or-jira-key>...] [--reference-site <id>] [--issue <number>] [--pr <number>] [--linear-issue <identifier-or-url>] [--gitlab-issue <number-or-url>] [--gitlab-mr <number-or-url>] [--comment <text>] [--parent-worktree <selector>] [--no-parent] [--run-hooks] [--activate] [--retry-launch <operationId>] [--json]',
   allowedFlags: [
     ...GLOBAL_FLAGS,
     'repo',
@@ -16,7 +17,12 @@ export const WORKTREE_CREATE_COMMAND_SPEC: CommandSpec = {
     'agent',
     'account',
     'prompt',
+    'model',
+    'effort',
+    'retry-launch',
     'base-branch',
+    'reference',
+    'reference-site',
     'issue',
     'pr',
     'linear-issue',
@@ -30,7 +36,8 @@ export const WORKTREE_CREATE_COMMAND_SPEC: CommandSpec = {
     'activate'
   ],
   notes: [
-    'This creates a new checkout. For a fresh agent in an existing worktree, use `orca terminal create --worktree active --command "codex"` instead.',
+    'Repeat --reference to attach full issue or review URLs, or Jira issue keys, before setup or agent startup. Use --reference-site to choose the Jira site for keys. Other providers require full URLs. Cannot combine with legacy link flags.',
+    'This creates a new checkout. For a fresh agent in an existing worktree, use `orca agent launch` instead.',
     'By default, Orca records the new worktree as a child of the caller context when it can infer one from the Orca terminal or current directory.',
     'If --repo is omitted, Orca infers the repo from the current Orca-managed worktree.',
     'Use --project with --host to create on a ready project host setup without spelling the backing repo id.',
@@ -39,9 +46,10 @@ export const WORKTREE_CREATE_COMMAND_SPEC: CommandSpec = {
     'Use --no-parent when the new worktree should be independent of the current context.',
     '--no-parent only affects Orca lineage; omit --base-branch to use the repo default base, or pass the default base ref explicitly for independent top-level work.',
     'By default this creates the worktree and its first terminal without switching the active Orca view.',
-    'Pass --agent to launch an agent in the first terminal; --prompt sends initial work to that agent.',
-    '--account <id|email> (with --agent claude) starts Claude on that managed account from `orca account list` without switching the host account. Local host workspaces only.',
-    'With --agent --json, read the new agent handle from result.agentTerminalHandle; older runtimes return only result.startupTerminal.handle, and may return neither for folder-based repos.',
+    'Pass --agent to start an agent with the worktree, as a chat or a terminal per your Chat UI setting, exactly as a new agent tab does; --prompt sends initial work to it. --model and --effort pick its model and reasoning effort.',
+    '--account <id|email> (with --agent claude) starts Claude in a terminal on that managed account from `orca account list` without switching the host account. Local host workspaces only; cannot be combined with --model, --effort or --retry-launch.',
+    'After a lost agent launch reply, re-issue the same command from the same directory on the same host with --retry-launch <operationId> from the error. Never retry as a fresh launch; older hosts require inspecting the workspace first.',
+    'With --agent --json, result.launch says what started: launch.outcome.kind (structured chat or terminal), launch.outcome.handle, and launch.receipt.detail for why. An Orca host older than this returns the terminal agent handle in result.agentTerminalHandle instead.',
     'Repo-defined setup hooks follow the repository setup policy; pass --setup run to force them.',
     'Pass --activate when the CLI caller intentionally wants to reveal the new worktree in the app.',
     'Passing --run-hooks is kept as a legacy alias for --setup run and reveals the worktree.',
@@ -49,6 +57,7 @@ export const WORKTREE_CREATE_COMMAND_SPEC: CommandSpec = {
   ],
   examples: [
     'orca worktree create --name agent-task --agent codex --prompt "hi" --json',
+    'orca worktree create --name design --no-parent --agent codex --model gpt-6-astra --effort high --prompt "Write the design doc" --json',
     'orca worktree create --repo id:<repoId> --name related-task --json',
     'orca worktree create --project github:stablyai/orca --host runtime:03ef704c-b180-4b10-998d-e28fbd5de9a3 --name benchmark --json',
     'orca worktree create --repo id:<repoId> --name linear-task --linear-issue https://linear.app/stably/issue/STA-335/test-issue --json',

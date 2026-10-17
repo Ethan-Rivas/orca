@@ -1,4 +1,5 @@
 import { paneIdentity } from './runtime-terminal-pane-identity'
+import { shouldSeedWorktreePrimaryTerminal } from '../../shared/worktree-first-surface'
 import { randomUUID } from 'node:crypto'
 import { getProjectHostSetupWorktreeMeta } from '../../shared/project-host-setup-lookup'
 import { resolveWorktreeCreateDisplayNameRequest } from '../ipc/worktree-logic'
@@ -7,6 +8,7 @@ import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
 import type { Repo } from '../../shared/repo-types'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
+import type { AgentLaunchRuntime } from '../../shared/agent-launch-runtime'
 import {
   getRuntimeFolderWorkspaceInstanceId,
   mergeRuntimeFolderWorkspace
@@ -41,7 +43,8 @@ type RuntimeFolderWorktreeCreateDeps = {
     repoId: string,
     worktreeId: string,
     setup?: undefined,
-    startup?: WorktreeStartupLaunch
+    startup?: WorktreeStartupLaunch,
+    providesInitialSurface?: boolean
   ) => void
 }
 
@@ -52,7 +55,11 @@ export async function createRuntimeFolderWorktree(args: {
   repo: Repo
   startup?: WorktreeStartupLaunch
   startupFollowup?: WorktreeStartupFollowup
+  /** What a host-built startup was quoted for, or the repair error it fails with. */
+  startupLaunchRuntime?: AgentLaunchRuntime | Error
   createdWithAgent?: TuiAgent
+  promisedAgentChat?: boolean
+  onWorkspaceCreated?: (worktreeId: string) => void
   draftPaste?: WorktreeStartupDraftPaste
   deps: RuntimeFolderWorktreeCreateDeps
 }): Promise<CreateWorktreeResult> {
@@ -119,6 +126,7 @@ export async function createRuntimeFolderWorktree(args: {
     ...(request.manualOrder !== undefined ? { manualOrder: request.manualOrder } : {}),
     ...(request.workspaceStatus !== undefined ? { workspaceStatus: request.workspaceStatus } : {})
   })
+  args.onWorkspaceCreated?.(worktreeId)
   const worktree = mergeRuntimeFolderWorkspace(repo, worktreeId, meta)
   deps.invalidateResolvedWorktrees()
   deps.notifyWorktreesChanged(repo.id)
@@ -134,6 +142,9 @@ export async function createRuntimeFolderWorktree(args: {
   let startupTerminal: CreateWorktreeResult['startupTerminal']
   if (args.startup && deps.ptySpawnAvailable) {
     try {
+      if (args.startupLaunchRuntime instanceof Error) {
+        throw args.startupLaunchRuntime
+      }
       const terminal = await deps.createTerminal(`id:${worktree.id}`, {
         command: args.startup.command,
         ...(request.startupCwd ? { cwd: request.startupCwd } : {}),
@@ -142,6 +153,7 @@ export async function createRuntimeFolderWorktree(args: {
         ...(args.startup.launchConfig ? { launchConfig: args.startup.launchConfig } : {}),
         ...(args.createdWithAgent ? { launchAgent: args.createdWithAgent } : {}),
         ...(args.startupClaudeAccountId ? { claudeAccountId: args.startupClaudeAccountId } : {}),
+        ...(args.startupLaunchRuntime ? { launchRuntime: args.startupLaunchRuntime } : {}),
         ...(args.startup.viewMode ? { viewMode: args.startup.viewMode } : {}),
         startupCommandDelivery: args.startup.startupCommandDelivery,
         telemetry: args.startup.telemetry,
@@ -174,14 +186,18 @@ export async function createRuntimeFolderWorktree(args: {
       worktree.id,
       undefined,
       // Why: the renderer's fallback launch cannot honour --account; it would use the active one.
-      args.startup && !didSpawnStartup && !args.startupClaudeAccountId ? args.startup : undefined
+      args.startup && !didSpawnStartup && !args.startupClaudeAccountId ? args.startup : undefined,
+      ...(args.promisedAgentChat && !args.startup ? ([true] as const) : [])
     )
   }
   if (
     (!shouldActivate || deps.provisionInBackground?.() === true) &&
     deps.ptySpawnAvailable &&
-    !didSpawnStartup &&
-    !args.createdWithAgent
+    shouldSeedWorktreePrimaryTerminal({
+      hasPrimarySurface: didSpawnStartup,
+      // Background attribution-only creates have historically omitted the shell.
+      callerProvidesSurface: args.promisedAgentChat === true || args.createdWithAgent !== undefined
+    })
   ) {
     try {
       await deps.createTerminal(`id:${worktree.id}`, { surfaceOwner: false })

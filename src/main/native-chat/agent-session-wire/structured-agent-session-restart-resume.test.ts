@@ -5,6 +5,7 @@
 // finished; missing one is an annoyance. Each test removes exactly one input from an otherwise
 // resumable session, so deleting the matching guard turns that test red.
 
+import { availableParallelism } from 'node:os'
 import { describe, expect, it, vi } from 'vitest'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
@@ -50,7 +51,13 @@ describe('deriving what was working at teardown', () => {
   it('marks a session this host was running a turn for', () => {
     const markers = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'running')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'running')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => record(),
       childWork: () => undefined,
@@ -77,7 +84,13 @@ describe('deriving what was working at teardown', () => {
   it('carries the update trigger so the surface can say the restart was not the user choice', () => {
     const [recorded] = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'running')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'running')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => record(),
       childWork: () => undefined,
@@ -92,7 +105,9 @@ describe('deriving what was working at teardown', () => {
   it('marks nothing for an idle session', () => {
     expect(
       markersAtTeardown({
-        sessions: new Map([[SESSION, { journal: journal([]), child: { fence: 1 } }]]),
+        sessions: new Map([
+          [SESSION, { journal: journal([]), child: { fence: 1, phase: 'ready' as const } }]
+        ]),
         getRecord: () => record(),
         childWork: () => undefined,
         trigger: 'quit',
@@ -106,7 +121,13 @@ describe('deriving what was working at teardown', () => {
     expect(
       markersAtTeardown({
         sessions: new Map([
-          [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), child: { fence: 1 } }]
+          [
+            SESSION,
+            {
+              journal: journal([turnItem('turn-1', 'completed')]),
+              child: { fence: 1, phase: 'ready' as const }
+            }
+          ]
         ]),
         getRecord: () => record(),
         childWork: () => undefined,
@@ -144,7 +165,7 @@ describe('deriving what was working at teardown', () => {
           SESSION,
           {
             journal: journal([turnItem('turn-1', 'running'), pendingApproval()]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ]
       ]),
@@ -168,7 +189,13 @@ describe('deriving what was working at teardown', () => {
   it('marks a settled lead whose subagent was still running, anchored on its last turn', () => {
     const markers = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'completed')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => record(),
       childWork: () => [childRecord({ id: 'task-a', kind: 'agent', description: 'Review loop 4' })],
@@ -189,7 +216,13 @@ describe('deriving what was working at teardown', () => {
   it('records only the live rows of the roster, bounded', () => {
     const [recorded] = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'completed')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => record(),
       childWork: () => [
@@ -215,7 +248,13 @@ describe('deriving what was working at teardown', () => {
   it('marks a settled lead whose only live work is a monitor', () => {
     const markers = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'completed')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => record(),
       childWork: () => [
@@ -234,7 +273,13 @@ describe('deriving what was working at teardown', () => {
     expect(
       markersAtTeardown({
         sessions: new Map([
-          [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), child: { fence: 1 } }]
+          [
+            SESSION,
+            {
+              journal: journal([turnItem('turn-1', 'completed')]),
+              child: { fence: 1, phase: 'ready' as const }
+            }
+          ]
         ]),
         getRecord: () => record(),
         childWork: () => [
@@ -252,7 +297,13 @@ describe('deriving what was working at teardown', () => {
   it('records the identity root so an advancing Claude leaf cannot invalidate the marker', () => {
     const [recorded] = markersAtTeardown({
       sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'running')]), child: { fence: 1 } }]
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'running')]),
+            child: { fence: 1, phase: 'ready' as const }
+          }
+        ]
       ]),
       getRecord: () => claudeRecord(null),
       childWork: () => undefined,
@@ -268,7 +319,13 @@ describe('deriving what was working at teardown', () => {
     expect(
       markersAtTeardown({
         sessions: new Map([
-          [SESSION, { journal: journal([turnItem('turn-1', 'running')]), child: { fence: 1 } }]
+          [
+            SESSION,
+            {
+              journal: journal([turnItem('turn-1', 'running')]),
+              child: { fence: 1, phase: 'ready' as const }
+            }
+          ]
         ]),
         getRecord: () => record({ chain: [] }),
         childWork: () => undefined,
@@ -289,7 +346,7 @@ describe('deriving what was working at teardown', () => {
           SESSION,
           {
             journal: journal([], [submission('msg-1', 'pending')]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ]
       ]),
@@ -312,7 +369,7 @@ describe('deriving what was working at teardown', () => {
           SESSION,
           {
             journal: journal([turnItem('turn-0', 'completed')], [submission('msg-1', 'pending')]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ]
       ]),
@@ -337,7 +394,7 @@ describe('deriving what was working at teardown', () => {
             SESSION,
             {
               journal: journal([turnItem('turn-0', 'completed')], [queued]),
-              child: { fence: 1 }
+              child: { fence: 1, phase: 'ready' as const }
             }
           ]
         ]),
@@ -363,14 +420,14 @@ describe('deriving what was working at teardown', () => {
           SESSION,
           {
             journal: journal([turnItem('turn-0', 'completed')], [handedOver, queued]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ],
         [
           'session-running',
           {
             journal: journal([turnItem('turn-1', 'running')], [queued]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ]
       ]),
@@ -396,7 +453,7 @@ describe('deriving what was working at teardown', () => {
           SESSION,
           {
             journal: journal([turnItem('turn-1', 'running')], [submission('msg-1', 'accepted')]),
-            child: { fence: 1 }
+            child: { fence: 1, phase: 'ready' as const }
           }
         ]
       ]),
@@ -558,14 +615,19 @@ describe('the resumable set', () => {
 })
 
 describe('spending a marker', () => {
-  function runner(overrides: { resume?: () => Promise<void>; concurrency?: number } = {}) {
+  function runner(
+    overrides: {
+      resume?: () => Promise<void>
+      admission?: StructuredAgentSessionResumeAdmission
+    } = {}
+  ) {
     const consumed = new Set<string>()
     const resume = overrides.resume ?? vi.fn(async () => {})
     return {
       resume,
       consumed,
       deps: {
-        admission: new StructuredAgentSessionResumeAdmission(),
+        admission: overrides.admission ?? new StructuredAgentSessionResumeAdmission(),
         // Stands in for the durable store: the first caller spends it, later ones find it gone.
         consumeMarker: async (sessionId: string) => {
           if (consumed.has(sessionId)) {
@@ -574,8 +636,7 @@ describe('spending a marker', () => {
           consumed.add(sessionId)
           return true
         },
-        resume,
-        ...(overrides.concurrency === undefined ? {} : { concurrency: overrides.concurrency })
+        resume
       }
     }
   }
@@ -670,6 +731,7 @@ describe('spending a marker', () => {
     let live = 0
     let peak = 0
     const { deps } = runner({
+      admission: new StructuredAgentSessionResumeAdmission(3),
       resume: async () => {
         live += 1
         peak = Math.max(peak, live)
@@ -684,7 +746,39 @@ describe('spending a marker', () => {
     const outcomes = await resumeStructuredAgentSessionsFromRestart(deps, candidates, 'banner')
 
     // Unbounded fan-out would peak at all 12 — which is the spawn storm this exists to prevent.
-    expect(peak).toBe(STRUCTURED_AGENT_SESSION_RESUME_CONCURRENCY)
+    expect(peak).toBe(3)
     expect(outcomes).toHaveLength(candidates.length)
+  })
+
+  // Different callers share one host-wide start limit.
+  it('shares the start limit across separate resume requests', async () => {
+    let live = 0
+    let peak = 0
+    const { deps } = runner({
+      admission: new StructuredAgentSessionResumeAdmission(3),
+      resume: async () => {
+        live += 1
+        peak = Math.max(peak, live)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        live -= 1
+      }
+    })
+
+    const outcomes = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        resumeStructuredAgentSessionsFromRestart(
+          deps,
+          [candidate(`session-separate-${index}`)],
+          'modal'
+        )
+      )
+    )
+
+    expect(peak).toBe(3)
+    expect(outcomes.flat().every((outcome) => outcome.outcome === 'resumed')).toBe(true)
+  })
+
+  it('sizes the default start limit to this machine', () => {
+    expect(STRUCTURED_AGENT_SESSION_RESUME_CONCURRENCY).toBe(Math.max(1, availableParallelism()))
   })
 })

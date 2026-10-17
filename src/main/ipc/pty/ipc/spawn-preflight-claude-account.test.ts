@@ -3,7 +3,6 @@ import type { ClaudeRuntimeAuthPreparation } from '../../../claude-accounts/runt
 import { installClaudeProfileRouter } from '../../../claude-accounts/claude-profile-installed-router'
 import type { ClaudeProfileRouter } from '../../../claude-accounts/claude-profile-router'
 import { CLAUDE_PROFILE_POINTER_ENV } from '../../../../shared/claude-profile-routing'
-import { registerSshPtyProvider, unregisterSshPtyProvider } from '../provider/registry'
 import { preparePtyIpcSpawnPreflight } from './spawn-preflight'
 import { createPtyIpcSpawnState, type PtyIpcSpawnState } from './spawn-state'
 import type { AdoptStablePaneResult, PtySpawnIpcArgs, PtySpawnIpcDeps } from './spawn-types'
@@ -15,7 +14,6 @@ const WORKTREE_ID = 'repo-1::/work/repo-1'
 const PINNED_PREPARATION: ClaudeRuntimeAuthPreparation = {
   configDir: '/profiles/acct-1/home',
   envPatch: { CLAUDE_CONFIG_DIR: '/profiles/acct-1/home' },
-  stripAuthEnv: true,
   provenance: 'profile:acct-1:pinned',
   pinnedAccountId: 'acct-1'
 }
@@ -31,6 +29,7 @@ function buildPreflightCtx(input: {
     prepareClaudeAuth: input.prepareClaudeAuth,
     store: { getRepo: (repoId: string) => (repoId === 'repo-1' ? repo : undefined) },
     transitionSpawnHiddenRendererPtyDeliveryState: vi.fn(),
+    assertWorkspaceAcceptsNewPty: () => undefined,
     assertFolderWorkspacePtyPathUsable: vi.fn(),
     adoptStablePane: vi.fn(async () => input.adoptedStablePane ?? null),
     resolvePtySpawnStartupCwd: (_worktreeId: string | undefined, cwd: string | undefined) => cwd,
@@ -55,7 +54,6 @@ function buildPreflightCtx(input: {
 describe('renderer pty spawn preflight: project Claude account', () => {
   afterEach(() => {
     installClaudeProfileRouter(undefined)
-    unregisterSshPtyProvider('ssh-1')
   })
 
   it('pins a fresh Claude launch to the project account', async () => {
@@ -71,20 +69,14 @@ describe('renderer pty spawn preflight: project Claude account', () => {
     expect(ctx.claudeAuth?.pinnedAccountId).toBe('acct-1')
   })
 
-  it('leaves non-Claude, SSH and reattach spawns unpinned', async () => {
+  it('leaves non-Claude and reattach spawns unpinned', async () => {
     const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: preflight only checks the provider's identity; this SSH spawn never reaches provider.spawn.
-    registerSshPtyProvider('ssh-1', { spawn: vi.fn() } as never)
     const adoptedStablePane: AdoptStablePaneResult = {
       result: { id: 'pty-adopted' },
       owner: { tabId: 'tab-1', leafId: 'leaf-1', ptyId: 'pty-adopted' }
     }
     const variants = [
       buildPreflightCtx({ args: { command: 'zsh' }, prepareClaudeAuth }),
-      buildPreflightCtx({
-        args: { command: 'claude', launchAgent: 'claude', connectionId: 'ssh-1' },
-        prepareClaudeAuth
-      }),
       buildPreflightCtx({
         args: { command: 'claude', launchAgent: 'claude' },
         prepareClaudeAuth,

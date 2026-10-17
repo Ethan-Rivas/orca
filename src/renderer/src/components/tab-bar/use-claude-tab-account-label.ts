@@ -3,18 +3,17 @@ import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { ClaudeManagedAccountSummary } from '../../../../shared/managed-account-types'
 import { claudeTabAccountLabel } from '@/lib/claude-tab-account-label'
-import { findLaunchRepo } from '@/lib/claude-launch-account'
+import { claudeAccountsTargetForRepo, findLaunchRepo } from '@/lib/claude-launch-account'
 import { fetchProviderAccountsSnapshot } from '@/runtime/runtime-provider-accounts-client'
-import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
 import { claudeAccountPinningUnsupportedReasonInState } from '@/components/settings/repository-claude-account'
 import { useAppStore } from '../../store'
 
 /**
- * The pinned Claude account's email for a terminal tab's tooltip, or null when the tab shows
+ * The pinned Claude account's email for a terminal tab's hover card, or null when the tab shows
  * no label (unpinned, sentinel, unknown id, or an SSH or WSL repo). The account roster is fetched lazily
- * on the first tooltip hover, not on every render, since the tab strip re-renders often.
+ * on the first hover, not on every render, since the tab strip re-renders often.
  */
-export function useClaudeTabAccountLabel(tab: TerminalTab): {
+export function useClaudeTabAccountLabel(tab: Pick<TerminalTab, 'id' | 'worktreeId'>): {
   label: string | null
   onTooltipOpenChange: (open: boolean) => void
 } {
@@ -29,7 +28,6 @@ export function useClaudeTabAccountLabel(tab: TerminalTab): {
     paneKey ? s.agentLaunchConfigByPaneKey?.[paneKey]?.launchConfig : undefined
   )
   const repo = useAppStore((s) => findLaunchRepo(s, { worktreeId: tab.worktreeId }))
-  const settings = useAppStore((s) => s.settings)
   const pinningUnsupported = useAppStore((s) =>
     repo ? claudeAccountPinningUnsupportedReasonInState(s, repo) !== null : false
   )
@@ -43,13 +41,13 @@ export function useClaudeTabAccountLabel(tab: TerminalTab): {
         return
       }
       fetchedRef.current = true
-      fetchProviderAccountsSnapshot(getRepoOwnerRoutedSettings(settings, repo))
+      fetchProviderAccountsSnapshot(claudeAccountsTargetForRepo(repo))
         .then((snapshot) => setAccounts(snapshot.claude.accounts))
         .catch(() => {
           fetchedRef.current = false
         })
     },
-    [settings, repo]
+    [repo]
   )
 
   return {

@@ -1,11 +1,17 @@
 import type { OrcaRuntimeService } from '../../../../orca-runtime'
 import { OrchestrationError } from '../../../../orchestration/orchestration-error'
 
-/** Refused before the dispatch row exists, so a remote placement never shows up as a failed start. */
+/**
+ * Refused before the dispatch row exists, so a remote placement never shows up as a failed start.
+ * No worktree id means no `--account` or a worktree this start creates, which is checked there.
+ */
 export async function assertClaudeAccountWorktreeIsLocal(
   runtime: Pick<OrcaRuntimeService, 'showTerminalWorkspaceLaunchScope'>,
-  worktreeId: string
+  worktreeId: string | undefined
 ): Promise<void> {
+  if (!worktreeId) {
+    return
+  }
   const scope = await runtime.showTerminalWorkspaceLaunchScope(`id:${worktreeId}`)
   if (scope.connectionId) {
     throw new OrchestrationError(

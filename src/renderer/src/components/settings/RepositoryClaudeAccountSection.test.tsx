@@ -28,11 +28,10 @@ vi.mock('../../store', () => {
 })
 
 vi.mock('@/lib/repo-runtime-owner', () => ({
-  getRepoOwnerRoutedSettings: (settings: unknown) => settings
+  runtimeTargetForRepoOwner: () => ({ kind: 'local' })
 }))
 
 vi.mock('@/runtime/runtime-rpc-client', () => ({
-  getActiveRuntimeTarget: () => ({ kind: 'local' }),
   callRuntimeRpc: vi.fn()
 }))
 

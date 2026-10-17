@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../shared/claude/project-claude-account-preference'
 import type { launchAgentInWebHostTab } from './launch-agent-web-host-tab'
 
-const mockQueueTabStartupCommand = vi.fn()
+type CreateTabOptions = { pendingStartup?: { launchConfig?: Record<string, unknown> } }
+const mockCreateTab = vi.fn(
+  (_worktreeId: string, _groupId?: string, _shell?: string, _options?: CreateTabOptions) => ({
+    id: 'tab-1'
+  })
+)
 const { mockIsWebRuntimeSessionActive, mockLaunchAgentInWebHostTab } = vi.hoisted(() => ({
   mockIsWebRuntimeSessionActive: vi.fn(() => false),
   mockLaunchAgentInWebHostTab: vi.fn((_args: Parameters<typeof launchAgentInWebHostTab>[0]) =>
@@ -30,9 +35,8 @@ const store = {
   openFiles: [],
   browserTabsByWorktree: {},
   tabBarOrderByWorktree: {},
-  createTab: vi.fn(() => ({ id: 'tab-1' })),
+  createTab: mockCreateTab,
   queueTabInitialCwd: vi.fn(),
-  queueTabStartupCommand: mockQueueTabStartupCommand,
   setActiveTabType: vi.fn(),
   setTabBarOrder: vi.fn()
 }
@@ -51,7 +55,7 @@ vi.mock('@/lib/native-chat-transcript-readability', () => ({
   isNativeChatTranscriptLocalReadable: () => true
 }))
 
-vi.mock('@/runtime/web-runtime-session', () => ({
+vi.mock('@/runtime/web-runtime-session-environment', () => ({
   isWebRuntimeSessionActive: mockIsWebRuntimeSessionActive
 }))
 
@@ -77,8 +81,8 @@ vi.mock('@/components/native-chat/native-chat-session-option-cache', () => ({
   seedNativeChatAppliedSessionOptions: vi.fn()
 }))
 
-function queuedLaunchConfig(): unknown {
-  return mockQueueTabStartupCommand.mock.calls[0]?.[1]?.launchConfig
+function queuedLaunchConfig(): Record<string, unknown> | undefined {
+  return mockCreateTab.mock.calls[0]?.[3]?.pendingStartup?.launchConfig
 }
 
 describe('launchAgentInNewTab Claude account', () => {
@@ -131,6 +135,6 @@ describe('launchAgentInNewTab Claude account', () => {
 
     webLaunch().relaunch!(ACTIVE_CLAUDE_ACCOUNT)
     expect(webLaunch().startupPlan.launchConfig.claudeAccountId).toBe(ACTIVE_CLAUDE_ACCOUNT)
-    expect(mockQueueTabStartupCommand).not.toHaveBeenCalled()
+    expect(mockCreateTab).not.toHaveBeenCalled()
   })
 })

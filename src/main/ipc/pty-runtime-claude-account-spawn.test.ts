@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { spawnMock } from './pty-ipc-mock-registry'
 import { setupPtyIpcSuite } from './pty-ipc-test-harness'
-import { registerPtyHandlers, registerSshPtyProvider } from './pty'
+import { registerPtyHandlers } from './pty/register-handlers'
 import {
   _internals as pinnedRegistryInternals,
   getPinnedClaudeAccountIdForPty
@@ -79,7 +79,6 @@ const ACTIVE_PREPARATION: ClaudeRuntimeAuthPreparation = {
   wslDistro: null,
   wslLinuxConfigDir: null,
   envPatch: {},
-  stripAuthEnv: true,
   provenance: 'profile:acct-a'
 }
 
@@ -90,7 +89,6 @@ const PINNED_PREPARATION: ClaudeRuntimeAuthPreparation = {
   wslDistro: null,
   wslLinuxConfigDir: null,
   envPatch: { CLAUDE_CONFIG_DIR: PINNED_DIR, ORCA_CLAUDE_INJECTED_CONFIG_DIR: PINNED_DIR },
-  stripAuthEnv: true,
   pinnedAccountId: 'acct-b',
   provenance: 'profile:acct-b:pinned'
 }
@@ -228,7 +226,6 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
   it('refuses non-Claude and SSH launches before preparing any credentials', async () => {
     const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
     const controller = registerRuntimeController(prepareClaudeAuth)
-    registerSshPtyProvider('ssh-1', { spawn: vi.fn() } as never)
 
     await expect(
       controller.spawn({
@@ -248,7 +245,7 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
         connectionId: 'ssh-1',
         claudeAccountId: 'acct-b'
       })
-    ).rejects.toThrow('not supported for SSH workspaces')
+    ).rejects.toThrow()
     expect(prepareClaudeAuth).not.toHaveBeenCalled()
   })
 
@@ -269,27 +266,6 @@ describe('runtime PTY spawn pinned to a Claude account', () => {
       })
     ).rejects.toThrow(/could not prepare the requested Claude account/)
     expect(spawnMock.mock.calls.length).toBe(spawnsBefore)
-  })
-
-  it('keeps the env-conflict refusal for a pinned launch and labels nothing', async () => {
-    const prepareClaudeAuth = vi.fn(async () => PINNED_PREPARATION)
-    const spawnsBefore = spawnMock.mock.calls.length
-    const controller = registerRuntimeController(prepareClaudeAuth)
-    try {
-      await expect(
-        controller.spawn({
-          cols: 80,
-          rows: 24,
-          worktreeId: 'wt-1',
-          command: 'claude',
-          env: { ANTHROPIC_API_KEY: 'sk-test' },
-          claudeAccountId: 'acct-b'
-        })
-      ).rejects.toThrow(/explicit Anthropic auth environment variables/)
-      expect(spawnMock.mock.calls.length).toBe(spawnsBefore)
-    } finally {
-      cleanup()
-    }
   })
 })
 

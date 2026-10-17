@@ -21,6 +21,7 @@ function buildModel(updateSettings: AccountsPaneSectionModel['updateSettings']) 
     localAccountRuntime: accountRuntime,
     localAccountRuntimeSentenceLabel: 'this device',
     remoteServerName: null,
+    accountOwner: { kind: 'local' },
     codexAccounts: { accounts: [], activeAccountId: null },
     codexAction: 'idle',
     visibleCodexAccounts: [],

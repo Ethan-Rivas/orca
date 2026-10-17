@@ -12,15 +12,14 @@ vi.mock('sonner', () => ({ toast: { error: mockToastError } }))
 
 vi.mock('@/store', () => ({
   useAppStore: {
-    getState: () => ({ tabsByWorktree: {}, closeTab: vi.fn(), setActiveTabType: vi.fn() })
+    getState: () => ({ setActiveWorktree: vi.fn(), setActiveTabType: vi.fn() })
   }
 }))
 
-vi.mock('@/runtime/web-runtime-session', () => ({
+vi.mock('@/runtime/web-runtime-terminal-creation', () => ({
   createWebRuntimeSessionTerminal: mockCreateTerminal,
   createWebRuntimeAgentSessionTerminal: vi.fn(),
-  createWebRuntimeAgentSessionTerminalWithLaunchDraft: vi.fn(),
-  isWebTerminalSurfaceTabId: () => true
+  createWebRuntimeAgentSessionTerminalWithLaunchDraft: vi.fn()
 }))
 
 const STARTUP_PLAN: AgentStartupPlan = {

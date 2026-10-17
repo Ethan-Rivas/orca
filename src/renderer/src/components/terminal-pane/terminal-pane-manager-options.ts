@@ -34,6 +34,8 @@ import {
 } from './refused-claude-launch-recovery'
 import type { TerminalPaneManagerOptionsContext } from './terminal-pane-mount-context'
 import { resolveTerminalInlineImagesEnabled } from '../../../../shared/terminal-inline-images-settings'
+import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
+import { layoutOwnerPaneGestures } from './terminal-pane-layout-owner-gestures'
 
 /** Builds the imperative PaneManager option bag from the mount context. */
 export function createTerminalPaneManagerOptions(
@@ -116,6 +118,15 @@ export function createTerminalPaneManagerOptions(
     },
     resolveExternalPaneDropTarget,
     onExternalPaneDrop,
+    // Switch point: in-tab pane moves and divider ratios go through main.
+    ...(ORCA_LAYOUT_OWNER_IS_MAIN
+      ? layoutOwnerPaneGestures({
+          worktreeId,
+          tabId,
+          managerRef,
+          shouldPersistLayout: context.shouldPersistLayout
+        })
+      : {}),
     terminalLigaturesEnabled: () =>
       resolveTerminalLigaturesEnabled(
         settingsRef.current?.terminalLigatures,

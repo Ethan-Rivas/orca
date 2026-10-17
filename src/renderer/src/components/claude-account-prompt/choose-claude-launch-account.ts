@@ -7,12 +7,12 @@ import { getRepoExecutionHostId } from '../../../../shared/execution-host'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { findLaunchRepo, resolveLaunchClaudeAccountId } from '@/lib/claude-launch-account'
-import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
 import {
-  fetchProviderAccountsSnapshot,
-  hasRemoteProviderAccountOwner
-} from '@/runtime/runtime-provider-accounts-client'
+  claudeAccountsTargetForRepo,
+  findLaunchRepo,
+  resolveLaunchClaudeAccountId
+} from '@/lib/claude-launch-account'
+import { fetchProviderAccountsSnapshot } from '@/runtime/runtime-provider-accounts-client'
 import { providerAccountMatchesView } from '../settings/provider-account-visibility'
 import { requestClaudeAccountPrompt } from './claude-account-prompt-state'
 import { claudeAccountPinningUnsupportedReasonInState } from '../settings/repository-claude-account'
@@ -116,16 +116,16 @@ export async function chooseClaudeLaunchAccountForWorkspace(workspace: {
   if (!settings || !claudeAccountPromptMayApplyInState(state, repo)) {
     return { kind: 'default' }
   }
-  const routedSettings = getRepoOwnerRoutedSettings(settings, repo)
+  const accountsTarget = claudeAccountsTargetForRepo(repo)
   let accounts: ClaudeManagedAccountSummary[]
   let activeAccountId: string | null
   try {
-    const snapshot = await fetchProviderAccountsSnapshot(routedSettings)
+    const snapshot = await fetchProviderAccountsSnapshot(accountsTarget)
     if (snapshot.failedProviders?.includes('claude')) {
       return cancelForUnavailableAccounts()
     }
     const visibility = {
-      remoteOwner: hasRemoteProviderAccountOwner(routedSettings),
+      remoteOwner: accountsTarget.kind === 'environment',
       ownerPlatform: null
     }
     accounts = snapshot.claude.accounts.filter((account) =>

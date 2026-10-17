@@ -5,6 +5,7 @@ import { isFolderRepo } from '../../../shared/repo-kind'
 import { sanitizeRepoIcon } from '../../../shared/repo-icon'
 import { normalizeGhAccountBinding } from '../../../shared/github/account-binding'
 import { normalizeRepoAgentAccounts } from '../../../shared/claude/project-claude-account-preference'
+import { normalizeJiraProjectReference } from '../../../shared/jira-project-reference'
 import { normalizeRepoSourceControlAiOverrides } from '../../../shared/source-control-ai'
 import {
   sanitizeForkSyncMode,
@@ -39,6 +40,7 @@ export function hydrateRepo(repo: Repo, gitUsernameCache: ReadonlyMap<string, st
     forkSyncMode: rawForkSyncMode,
     ghAccount: rawGhAccount,
     agentAccounts: rawAgentAccounts,
+    defaultJiraProject: rawDefaultJiraProject,
     customWorktreeVisibilitySources: rawCustomWorktreeVisibilitySources,
     worktreeVisibilitySourcePreferences: rawWorktreeVisibilitySourcePreferences,
     ...repoWithoutIcon
@@ -51,6 +53,7 @@ export function hydrateRepo(repo: Repo, gitUsernameCache: ReadonlyMap<string, st
   const forkSyncMode = sanitizeForkSyncMode(rawForkSyncMode)
   const ghAccount = normalizeGhAccountBinding(rawGhAccount)
   const agentAccounts = normalizeRepoAgentAccounts(rawAgentAccounts)
+  const defaultJiraProject = normalizeJiraProjectReference(rawDefaultJiraProject)
   const customWorktreeVisibilitySources = normalizeCustomWorktreeVisibilitySources(
     rawCustomWorktreeVisibilitySources
   )
@@ -75,6 +78,7 @@ export function hydrateRepo(repo: Repo, gitUsernameCache: ReadonlyMap<string, st
     ...(forkSyncMode !== undefined ? { forkSyncMode } : {}),
     ...(ghAccount ? { ghAccount } : {}),
     ...(agentAccounts ? { agentAccounts } : {}),
+    ...(defaultJiraProject !== undefined ? { defaultJiraProject } : {}),
     ...(customWorktreeVisibilitySources !== undefined ? { customWorktreeVisibilitySources } : {}),
     ...(worktreeVisibilitySourcePreferences !== undefined
       ? { worktreeVisibilitySourcePreferences }

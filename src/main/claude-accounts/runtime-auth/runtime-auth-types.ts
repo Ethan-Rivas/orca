@@ -6,7 +6,6 @@ export type ClaudeRuntimeAuthPreparation = {
   wslDistro?: string | null
   wslLinuxConfigDir?: string | null
   envPatch: ClaudeEnvPatch
-  stripAuthEnv: boolean
   /** Set only by a `--account` launch on a host account that is not the selected one. */
   pinnedAccountId?: string
   provenance: string

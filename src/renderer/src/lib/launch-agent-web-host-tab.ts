@@ -3,9 +3,8 @@ import { useAppStore } from '@/store'
 import {
   createWebRuntimeAgentSessionTerminal,
   createWebRuntimeAgentSessionTerminalWithLaunchDraft,
-  createWebRuntimeSessionTerminal,
-  isWebTerminalSurfaceTabId
-} from '@/runtime/web-runtime-session'
+  createWebRuntimeSessionTerminal
+} from '@/runtime/web-runtime-terminal-creation'
 import type { AgentStartupPlan } from '@/lib/tui-agent-startup'
 import type { Tab } from '../../../shared/tab-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
@@ -14,17 +13,6 @@ import { translate } from '@/i18n/i18n'
 import { toAgentLaunchPreferences } from '../../../shared/agent-launch-preferences'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../shared/claude/project-claude-account-preference'
 import { describeClaudePinnedLaunchError } from '@/components/terminal-pane/claude-pinned-launch-error-copy'
-
-function removeStaleLocalAgentTabsForWebHostLaunch(worktreeId: string): void {
-  const state = useAppStore.getState()
-  for (const tab of state.tabsByWorktree[worktreeId] ?? []) {
-    if (tab.launchAgent && !isWebTerminalSurfaceTabId(tab.id)) {
-      // Why: pruning a stale local agent tab is a system close — keep it out of
-      // the Cmd+Shift+T reopen stack.
-      state.closeTab(tab.id, { reason: 'cleanup' })
-    }
-  }
-}
 
 function toastWebHostLaunchFailure(
   agent: TuiAgent,
@@ -61,9 +49,7 @@ function toastWebHostLaunchFailure(
  * Launch an agent terminal on the web runtime host instead of a local tab.
  *
  * Why: paired web tabs are host-owned, so this path never creates a local tab
- * (callers return tabId: null). Local-only agent tabs cannot be closed because
- * close routes through session.tabs.close on the host, so prune them before
- * the host snapshot.
+ * (callers return tabId: null).
  */
 export function launchAgentInWebHostTab(args: {
   agent: TuiAgent
@@ -102,7 +88,6 @@ export function launchAgentInWebHostTab(args: {
   const launchPreferences = toAgentLaunchPreferences(startupPlan.sessionOptions)
   const structuredPromptDelivery: AgentPromptDelivery =
     promptDelivery === 'draft' ? 'draft' : 'auto-submit'
-  removeStaleLocalAgentTabsForWebHostLaunch(worktreeId)
   const launch = {
     worktreeId,
     environmentId,
@@ -143,9 +128,6 @@ export function launchAgentInWebHostTab(args: {
     outcome: Awaited<ReturnType<typeof createWebRuntimeSessionTerminal>>
     promptDelivered: boolean
   }): { delivered: boolean; failureNotified: boolean } => {
-    // Why: created means the host accepted the launch, not that a local tab
-    // exists; keep pruning stale local rows until the snapshot mirrors.
-    removeStaleLocalAgentTabsForWebHostLaunch(worktreeId)
     if (outcome.status === 'failed') {
       toastWebHostLaunchFailure(agent, outcome.message, relaunch)
       return { delivered: false, failureNotified: true }

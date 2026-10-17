@@ -6,8 +6,7 @@ import { repoAgentAccountsEqual } from '../../../../shared/claude/project-claude
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { SearchableSetting } from './SearchableSetting'
 import { useAppStore } from '../../store'
-import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
-import { getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
+import { claudeAccountsTargetForRepo } from '@/lib/claude-launch-account'
 import { fetchProviderAccountsSnapshot } from '@/runtime/runtime-provider-accounts-client'
 import { providerAccountMatchesView } from './provider-account-visibility'
 import { translate } from '@/i18n/i18n'
@@ -30,7 +29,6 @@ export function RepositoryClaudeAccountSection({
   updateRepo,
   forceVisible
 }: RepositoryClaudeAccountSectionProps): React.JSX.Element | null {
-  const settings = useAppStore((state) => state.settings)
   const [accounts, setAccounts] = useState<ClaudeManagedAccountSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -43,13 +41,15 @@ export function RepositoryClaudeAccountSection({
     claudeAccountPinningUnsupportedReasonInState(state, repo)
   )
 
-  // Why: getRepoOwnerRoutedSettings returns a fresh object each render, and the target
-  // depends on nothing else — key the memo on the id so it stays stable.
-  const activeRuntimeEnvironmentId =
-    getRepoOwnerRoutedSettings(settings, repo)?.activeRuntimeEnvironmentId ?? null
+  const ownerTarget = claudeAccountsTargetForRepo(repo)
+  // Why keyed on the environment id: the converter returns a fresh object each render.
+  const ownerEnvironmentId = ownerTarget.kind === 'environment' ? ownerTarget.environmentId : null
   const runtimeTarget = useMemo(
-    () => getActiveRuntimeTarget({ activeRuntimeEnvironmentId }),
-    [activeRuntimeEnvironmentId]
+    () =>
+      ownerEnvironmentId
+        ? { kind: 'environment' as const, environmentId: ownerEnvironmentId }
+        : { kind: 'local' as const },
+    [ownerEnvironmentId]
   )
   const accountVisibilityOptions = useMemo(
     () => ({ remoteOwner: runtimeTarget.kind === 'environment', ownerPlatform: null }),
@@ -64,7 +64,7 @@ export function RepositoryClaudeAccountSection({
     setLoading(true)
     setError(null)
     try {
-      const snapshot = await fetchProviderAccountsSnapshot({ activeRuntimeEnvironmentId })
+      const snapshot = await fetchProviderAccountsSnapshot(runtimeTarget)
       if (generation !== loadGenerationRef.current) {
         return
       }
@@ -91,7 +91,7 @@ export function RepositoryClaudeAccountSection({
         setLoading(false)
       }
     }
-  }, [unsupportedReason, activeRuntimeEnvironmentId, accountVisibilityOptions])
+  }, [unsupportedReason, runtimeTarget, accountVisibilityOptions])
 
   useEffect(() => {
     void loadAccounts()

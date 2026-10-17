@@ -1,3 +1,4 @@
+import { sameAgentStatusTerminalOwner } from '../../../../shared/agent-status-terminal-owner'
 import { isWslHookRelayConnectionId } from '../../../../shared/wsl-hook-relay-contract'
 import type { AgentStatusIpcPayload } from '../../../../shared/agent-status-types'
 import {
@@ -16,6 +17,7 @@ import {
   applyResolvedAgentTerminalTitleToTab,
   hasRuntimeBackedWorktreeAttribution,
   isAgentStatusForRecentlyClosedTab,
+  isSeenHostReplay,
   resolveHookPayloadAgentType,
   shouldApplyResolvedAgentTerminalTitleToTab
 } from './agent-status-routing'
@@ -186,36 +188,38 @@ export function createAgentStatusEventApplicator(args: {
     const statusPayload = data.orchestration
       ? { ...resolvedPayload, orchestration: data.orchestration }
       : resolvedPayload
-    const statusPayloadWithTurnBoundary = data.promptInteractionKey
-      ? { ...statusPayload, promptInteractionKey: data.promptInteractionKey }
-      : statusPayload
-    const statusPayloadWithProvenance =
-      data.restoredUnconfirmed === true
-        ? { ...statusPayloadWithTurnBoundary, restoredUnconfirmed: true }
-        : statusPayloadWithTurnBoundary
     const statusPayloadWithObservation = {
-      ...(data.observation
-        ? { ...statusPayloadWithProvenance, observation: data.observation }
-        : statusPayloadWithProvenance),
+      ...statusPayload,
+      ...(data.promptInteractionKey ? { promptInteractionKey: data.promptInteractionKey } : {}),
+      ...(data.restoredUnconfirmed === true ? { restoredUnconfirmed: true } : {}),
+      ...(data.observation ? { observation: data.observation } : {}),
       claudeAccountId: normalizeMainClaudeAccountId(data)
     }
     const identity = resolveAgentStatusIdentity({
-      existing: existingStatus
-        ? {
-            agentType: existingStatus.agentType,
-            state: existingStatus.state,
-            updatedAt: existingStatus.updatedAt,
-            restoredUnconfirmed: existingStatus.restoredUnconfirmed
+      existing:
+        existingStatus &&
+        sameAgentStatusTerminalOwner(
+          {
+            connectionId: existingStatus.connectionId ?? null,
+            worktreeId: existingStatus.worktreeId
+          },
+          {
+            connectionId:
+              (ownershipConnectionId === undefined
+                ? existingStatus.connectionId
+                : ownershipConnectionId) ?? null,
+            worktreeId: data.worktreeId ?? owningWorktreeId ?? existingStatus.worktreeId
           }
-        : undefined,
+        )
+          ? existingStatus
+          : undefined,
       incoming: statusPayload.agentType,
       now: data.receivedAt
     })
     if (
       existingStatus &&
       shouldSuppressInheritedTerminalStatus({
-        inheritedFromActivePane: identity.inheritedFromActivePane,
-        incomingState: statusPayload.state
+        inheritedFromActivePane: identity.inheritedFromActivePane
       })
     ) {
       return 'dropped'
@@ -242,8 +246,11 @@ export function createAgentStatusEventApplicator(args: {
       },
       metadata: normalizeAgentStatusMetadata(data, authorityRestartId)
     }
+    // Why: replays are cached state, so they seed completion tracking unless they carry an unseen done.
+    const replayed =
+      options?.replay === true || isSeenHostReplay(data, resolvedPayload.state, existingStatus)
     const applyPostCommitNotification = (): void => {
-      if (statusWorktreeId && (options?.replay !== true || resolvedPayload.state === 'working')) {
+      if (statusWorktreeId && (!replayed || resolvedPayload.state === 'working')) {
         const notificationPayload =
           typeof data.stateStartedAt === 'number'
             ? { ...resolvedPayload, stateStartedAt: data.stateStartedAt }
@@ -252,7 +259,7 @@ export function createAgentStatusEventApplicator(args: {
           paneKey,
           worktreeId: statusWorktreeId,
           payload: notificationPayload,
-          ...(options?.replay === true ? { seedOnly: true } : {})
+          ...(replayed ? { seedOnly: true } : {})
         })
       }
     }
