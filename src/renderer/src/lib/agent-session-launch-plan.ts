@@ -1,7 +1,11 @@
 import { isPinnableClaudeAccountId } from '../../../shared/claude/project-claude-account-preference'
 import type { StructuredAgentSessionResumeSource } from '../../../shared/structured-agent-session-create'
 import type { TuiAgent } from '../../../shared/tui-agent'
-import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
+import {
+  isLocalExecutionHost,
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host'
 import { STRUCTURED_AGENT_SESSION_REGISTERED_AGENTS_RUNTIME_CAPABILITY } from '../../../shared/protocol-version'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
@@ -246,8 +250,7 @@ function structuredRouteAwaits(
   ) {
     return 'host-agents'
   }
-  return downgrade === 'runtime-capability-unknown' &&
-    parseExecutionHostId(input.executionHostId)?.kind === 'local'
+  return downgrade === 'runtime-capability-unknown' && isLocalExecutionHost(input.executionHostId)
     ? 'local-capabilities'
     : null
 }
@@ -279,7 +282,7 @@ export function awaitStructuredRouteHostAnswer(
     let capabilities = input.hostCapabilities
     // Either route may be missing this computer's capabilities: wait for the probe that lands
     // them, since one that failed at startup answers null at once.
-    if (capabilities === null && parseExecutionHostId(input.executionHostId)?.kind === 'local') {
+    if (capabilities === null && isLocalExecutionHost(input.executionHostId)) {
       const wait = awaitLocalRuntimeCapabilities()
       stopCapabilitiesWait = wait.stop
       capabilities = await Promise.race([wait.known, deadline])

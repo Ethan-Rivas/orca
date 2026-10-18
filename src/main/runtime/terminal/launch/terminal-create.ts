@@ -108,7 +108,7 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
           releaseStablePaneCreate?.()
           throw error
         }
-        const env = await this.buildTerminalWorkspaceEnv(
+        const env = this.buildTerminalWorkspaceEnv(
           workspace,
           {
             ...baseEnv,
@@ -118,8 +118,6 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
                 }
               : {})
           },
-          paneKey,
-          tabId,
           agentTeamsPlan?.env
         )
         const terminalColorQueryReplies = dependencies.getTerminalViewerColors()
