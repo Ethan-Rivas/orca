@@ -2,11 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { X, Minimize2, Pin } from 'lucide-react'
 import { stripLeadingAgentTitleDecoration } from '../../../../shared/agent-title-decoration'
-import { getAgentLabel } from '@/lib/agent-catalog'
-import { basename } from '@/lib/path'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import { Input } from '@/components/ui/input'
-import { TabHoverCard } from './TabHoverCard'
+import { TerminalTabHoverCard } from './TerminalTabHoverCard'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TerminalAgent } from '../../../../shared/terminal-agent'
 import type { TabDragItemData } from '../tab-group/useTabDragSplit'
@@ -31,7 +29,6 @@ import {
   resolveTerminalTabActivityStatus,
   terminalTabHasUnreadActivity
 } from './terminal-tab-activity-status'
-import { useClaudeTabAccountLabel } from './use-claude-tab-account-label'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '@/lib/close-all-context-menus'
 import type { NativeChatTabSession } from './tab-session-history-switch'
 
@@ -195,7 +192,6 @@ export default function SortableTab({
   })
   const slotProps = useTabStripSlotProps(tab.id, isActive)
   const tabTitle = tab.customTitle ?? tab.title
-  const { label: claudeAccountLabel, onTooltipOpenChange } = useClaudeTabAccountLabel(tab)
   const tabRoot = (
     <div
       ref={setNodeRef}
@@ -378,16 +374,11 @@ export default function SortableTab({
         {isEditing || menuOpening !== null ? (
           tabRoot
         ) : (
-          <TabHoverCard
+          <TerminalTabHoverCard
+            tab={tab}
             title={displayTitle}
-            programName={
-              tabAgent
-                ? [getAgentLabel(tabAgent), claudeAccountLabel].filter(Boolean).join(' · ')
-                : shellForIcon
-                  ? basename(shellForIcon)
-                  : translate('tabHoverCard.terminal', 'Terminal')
-            }
-            onOpenChange={onTooltipOpenChange}
+            agent={tabAgent}
+            shell={shellForIcon}
             icon={
               <TerminalTabLeadingIcon
                 agent={tabAgent}
@@ -399,7 +390,7 @@ export default function SortableTab({
             }
           >
             {tabRoot}
-          </TabHoverCard>
+          </TerminalTabHoverCard>
         )}
       </div>
 
