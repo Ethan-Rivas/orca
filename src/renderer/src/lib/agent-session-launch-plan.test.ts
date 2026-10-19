@@ -193,7 +193,7 @@ describe('planAgentSessionLaunch with a pinned Claude account', () => {
     mocks.resolveAgentLaunchRoute.mockReturnValue('structured-native-chat')
   })
 
-  it("downgrades Claude to the terminal on the project's saved account or an explicit one", () => {
+  it("downgrades Claude to the terminal on the project's saved account or an explicit one, even when chat was asked for", () => {
     expect(
       planAgentSessionLaunch(pinnedStore, { requestId: 'req-1', agent: 'claude', workspace }).route
     ).toBe('terminal-tui')
@@ -203,6 +203,14 @@ describe('planAgentSessionLaunch with a pinned Claude account', () => {
         agent: 'claude',
         workspace: { kind: 'git-worktree', worktreeId: 'wt-1' },
         claudeAccountId: 'acct-2'
+      }).route
+    ).toBe('terminal-tui')
+    expect(
+      planAgentSessionLaunch(pinnedStore, {
+        requestId: 'req-1',
+        agent: 'claude',
+        workspace,
+        requestedSurface: 'chat'
       }).route
     ).toBe('terminal-tui')
   })

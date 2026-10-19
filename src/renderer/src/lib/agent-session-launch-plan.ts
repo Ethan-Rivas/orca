@@ -44,6 +44,8 @@ type ClaudeAccountRouteArgs = AgentLaunchRouteArgs & {
 export type AgentSessionLaunchRequest = ClaudeAccountRouteArgs & {
   /** The user action this launch serves, minted where that action is handled. */
   requestId: AgentLaunchRequestId
+  requestedSurface?: 'chat' | 'terminal'
+  selectedExecutionHostId?: ExecutionHostId
   resumeFrom?: StructuredAgentSessionResumeSource
   onPromptDelivered?: () => void
   /** The caller keeps the prompt's text if it does not go out (notes), so no composer gets it. */
@@ -57,6 +59,7 @@ export type AgentSessionLaunchRequest = ClaudeAccountRouteArgs & {
  */
 export type AgentSessionLaunchVerdict = {
   route: AgentLaunchRoute
+  requestedSurface?: 'chat' | 'terminal'
   /** The user action this launch serves; a re-entry with this verdict is that same action. */
   requestId: AgentLaunchRequestId
   agent: TuiAgent
@@ -192,10 +195,15 @@ function launchPinsClaudeAccount(
 
 function resolvePlannedRoute(
   store: AgentLaunchRouteStore,
-  request: ClaudeAccountRouteArgs,
+  request: ClaudeAccountRouteArgs & Pick<AgentSessionLaunchRequest, 'requestedSurface'>,
   input: ReturnType<typeof buildAgentLaunchRouteInput>
 ): AgentLaunchRoute {
-  const route = resolveAgentLaunchRoute(input)
+  const route = request.requestedSurface
+    ? request.requestedSurface === 'chat'
+      ? 'structured-native-chat'
+      : 'terminal-tui'
+    : resolveAgentLaunchRoute(input)
+  // Why even over a requested chat: a chat cannot run on the pinned account, and must not run on another.
   return route === 'structured-native-chat' && launchPinsClaudeAccount(store, request)
     ? 'terminal-tui'
     : route
@@ -318,11 +326,16 @@ export function planAgentSessionLaunch(
 ): AgentSessionLaunchPlan {
   const input = buildAgentLaunchRouteInput(store, request)
   const route = resolvePlannedRoute(store, request, input)
-  reportStructuredLaunchDowngrade(store, input, route)
+  if (!request.requestedSurface) {
+    reportStructuredLaunchDowngrade(store, input, route)
+  }
   const executionHostId =
-    route === 'structured-native-chat' ? parseExecutionHostId(input.executionHostId)?.id : undefined
+    route === 'structured-native-chat'
+      ? (request.selectedExecutionHostId ?? parseExecutionHostId(input.executionHostId)?.id)
+      : undefined
   return adoptAgentSessionLaunchVerdict({
     route,
+    ...(request.requestedSurface ? { requestedSurface: request.requestedSurface } : {}),
     requestId: request.requestId,
     agent: request.agent,
     ...(executionHostId ? { executionHostId } : {}),

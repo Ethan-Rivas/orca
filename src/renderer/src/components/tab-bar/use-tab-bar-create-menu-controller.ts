@@ -1,21 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import type { TuiAgent } from '../../../../shared/tui-agent'
-import { translate } from '@/i18n/i18n'
 import { focusTerminalTabSurface } from '@/lib/focus-terminal-tab-surface'
-import {
-  launchAgentInNewTab,
-  shouldQueueTerminalFocusAfterMenuClose
-} from '@/lib/launch-agent-in-new-tab'
-import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
-import { captureNativeChatComposerFocusIntent } from '@/components/native-chat/use-native-chat-composer-reveal-focus'
 import type { WindowsTerminalCapabilities } from '@/lib/windows-terminal-capabilities'
 import { useAppStore } from '../../store'
-import { launchWithClaudeAccountChoice } from '../claude-account-prompt/choose-claude-launch-account'
 import type { TabAgentLaunchOption } from './tab-agent-launch-options'
+import { useTabAgentMenuLaunch } from './QuickLaunchButton'
+import { useNewTabAgentMenuRows, type NewTabAgentMenuModel } from './use-new-tab-agent-menu-rows'
+import type { AgentDetectionTarget } from '@/hooks/useDetectedAgents'
+import { buildTabAgentLaunchOptionsFromRows } from './tab-agent-launch-options'
 import { buildTabCreateMenuOptions, type TabCreateMenuOption } from './tab-create-menu-options'
 import { resolveWindowsShellLaunchTarget } from './windows-shell-launch'
-import { focusNewActiveTerminalWhenReady } from './new-tab-menu-terminal-focus'
 import {
   buildWindowsShellMenuEntries,
   type WindowsShellMenuEntry
@@ -24,17 +17,19 @@ import type {
   getProjectRuntimeShellMenuMode,
   resolveWindowsPowerShellImplementationSetting
 } from './use-tab-bar-runtime-model'
-
+const NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS = 50
 const NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS = 5000
-
 export type TabBarCreateMenuController = {
+  agentMenu: NewTabAgentMenuModel
+  agentLaunchOptions: TabAgentLaunchOption[]
+  launchAgentRow: ReturnType<typeof useTabAgentMenuLaunch>
   newTabMenuOpen: boolean
   setNewTabMenuOpen: (open: boolean) => void
   setCreateMenuQuery: (query: string) => void
   createMenuOptions: TabCreateMenuOption[]
   windowsShellEntries: WindowsShellMenuEntry[] | undefined
   handleSelectCreateMenuOption: (option: TabCreateMenuOption) => void
-  launchAgentFromNewTabEntry: (agent: TuiAgent) => void
+  launchAgentFromNewTabEntry: (option: TabAgentLaunchOption) => void
   runPendingNewTabMenuFocusAfterClose: () => void
   clearPendingNewTabMenuFocusOnUnmount: (node: HTMLDivElement | null) => void
   queueNewActiveTerminalFocusAfterNewTabMenuClose: () => void
@@ -42,11 +37,11 @@ export type TabBarCreateMenuController = {
   queueFocusAfterNewTabMenuClose: (focus: () => void) => void
   showStaticCreateMenuItems: boolean
 }
-
 export function useTabBarCreateMenuController({
   worktreeId,
   resolvedGroupId,
   terminalOnly,
+  showAgentLaunchItems = true,
   mobileEmulatorEnabled,
   managedBrowserCreationEnabled,
   mobileEmulatorCreationEnabled,
@@ -55,8 +50,8 @@ export function useTabBarCreateMenuController({
   projectRuntimeShellMenuMode,
   defaultWindowsShell,
   defaultWindowsPowerShellImplementation,
+  agentDetectionTarget,
   windowsTerminalCapabilities,
-  agentLaunchOptions,
   onNewTerminalTab,
   onNewTerminalWithShell,
   onNewBrowserTab,
@@ -67,6 +62,7 @@ export function useTabBarCreateMenuController({
   worktreeId: string
   resolvedGroupId: string
   terminalOnly: boolean
+  showAgentLaunchItems?: boolean
   mobileEmulatorEnabled: boolean
   managedBrowserCreationEnabled: boolean
   mobileEmulatorCreationEnabled: boolean
@@ -77,8 +73,8 @@ export function useTabBarCreateMenuController({
   defaultWindowsPowerShellImplementation: ReturnType<
     typeof resolveWindowsPowerShellImplementationSetting
   >
+  agentDetectionTarget: AgentDetectionTarget | undefined
   windowsTerminalCapabilities: WindowsTerminalCapabilities
-  agentLaunchOptions: TabAgentLaunchOption[]
   onNewTerminalTab: () => void
   onNewTerminalWithShell?: (shell: string) => void
   onNewBrowserTab: () => void
@@ -89,6 +85,16 @@ export function useTabBarCreateMenuController({
   // Why: <webview> clicks are out-of-process, so Radix's document-pointerdown outside-click check misses them; use window blur.
   const [newTabMenuOpen, setNewTabMenuOpen] = useState(false)
   const [createMenuQuery, setCreateMenuQuery] = useState('')
+  const agentMenu = useNewTabAgentMenuRows(
+    worktreeId,
+    newTabMenuOpen && showAgentLaunchItems,
+    agentDetectionTarget
+  )
+  const commandOverrides = useAppStore((state) => state.settings?.agentCmdOverrides)
+  const agentLaunchOptions = buildTabAgentLaunchOptionsFromRows(
+    agentMenu.state === 'settled' ? agentMenu.rows : [],
+    commandOverrides
+  )
   const pendingNewTabMenuFocusRef = useRef<(() => void) | null>(null)
   const pendingNewTabMenuFocusAnimationRef = useRef<number | null>(null)
   const pendingNewTabMenuFocusRetryRef = useRef<number | null>(null)
@@ -106,12 +112,33 @@ export function useTabBarCreateMenuController({
     window.clearTimeout(pendingNewTabMenuFocusRetryRef.current)
     pendingNewTabMenuFocusRetryRef.current = null
   }
+  const focusNewActiveTerminalWhenReady = (
+    previousActiveTabId: string | null,
+    expiresAt: number,
+    now: number
+  ): void => {
+    const state = useAppStore.getState()
+    if (
+      (state.activeTabType === 'terminal' || state.activeTabType === 'simulator') &&
+      state.activeTabId &&
+      state.activeTabId !== previousActiveTabId
+    ) {
+      focusTerminalTabSurface(state.activeTabId)
+      return
+    }
+    if (now >= expiresAt) {
+      return
+    }
+    pendingNewTabMenuFocusRetryRef.current = window.setTimeout(() => {
+      pendingNewTabMenuFocusRetryRef.current = null
+      focusNewActiveTerminalWhenReady(previousActiveTabId, expiresAt, Date.now())
+    }, NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS)
+  }
   const queueNewActiveTerminalFocusAfterNewTabMenuClose = (): void => {
     const previousActiveTabId = useAppStore.getState().activeTabId
     pendingNewTabMenuFocusRef.current = () => {
       // Why: paired web/SSH tab creation is async; await the host snapshot's new terminal instead of the pre-existing active tab.
       focusNewActiveTerminalWhenReady(
-        pendingNewTabMenuFocusRetryRef,
         previousActiveTabId,
         Date.now() + NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS,
         Date.now()
@@ -201,38 +228,18 @@ export function useTabBarCreateMenuController({
         onNewSimulatorTab?.()
     }
   }
-  const launchAgentFromNewTabEntry = (agent: TuiAgent): void => {
-    const option = agentLaunchOptions.find((candidate) => candidate.agent === agent)
-    // Why captured before the account prompt: the prompt itself takes focus.
-    const focusIntent = captureNativeChatComposerFocusIntent()
-    // Why: after the account prompt the menu has already closed, so the queued focus must run now.
-    const afterDeferredLaunch = runPendingNewTabMenuFocusAfterClose
-    launchWithClaudeAccountChoice(agent, { worktreeId, afterDeferredLaunch }, (claudeAccountId) => {
-      const result = launchAgentInNewTab({
-        requestId: newAgentLaunchRequestId(),
-        focusIntent,
-        agent,
-        worktreeId,
-        groupId: resolvedGroupId,
-        launchSource: 'tab_bar_quick_launch',
-        claudeAccountId
-      })
-      if (!result) {
-        toast.error(
-          translate(
-            'auto.components.tab.bar.TabBar.ab589350e5',
-            'Could not build launch command for {{value0}}.',
-            { value0: option?.label ?? agent }
-          )
-        )
-        return
-      }
-      if (result.surface.kind === 'local-terminal') {
-        queueTerminalTabFocusAfterNewTabMenuClose(result.surface.tabId)
-      } else if (shouldQueueTerminalFocusAfterMenuClose(result)) {
-        queueNewActiveTerminalFocusAfterNewTabMenuClose()
-      }
-    })
+  const launchAgentRow = useTabAgentMenuLaunch({
+    worktreeId,
+    groupId: resolvedGroupId,
+    launchSource: 'tab_bar_quick_launch',
+    onFocusTerminal: queueTerminalTabFocusAfterNewTabMenuClose,
+    onFocusHostTerminal: queueNewActiveTerminalFocusAfterNewTabMenuClose,
+    afterDeferredLaunch: () => runPendingNewTabMenuFocusAfterClose()
+  })
+  const launchAgentFromNewTabEntry = (option: TabAgentLaunchOption): void => {
+    if (option.row) {
+      launchAgentRow(option.row)
+    }
   }
   const runPendingNewTabMenuFocusAfterClose = (): void => {
     const pendingFocus = pendingNewTabMenuFocusRef.current
@@ -260,7 +267,6 @@ export function useTabBarCreateMenuController({
     }
   }
   const clearPendingNewTabMenuFocusOnUnmount = clearPendingNewTabMenuFocusOnUnmountRef.current
-
   useEffect(() => {
     if (!newTabMenuOpen) {
       return
@@ -269,14 +275,15 @@ export function useTabBarCreateMenuController({
     window.addEventListener('blur', dismiss)
     return () => window.removeEventListener('blur', dismiss)
   }, [newTabMenuOpen])
-
   useEffect(() => {
     if (!newTabMenuOpen) {
       setCreateMenuQuery('')
     }
   }, [newTabMenuOpen])
-
   return {
+    agentMenu,
+    agentLaunchOptions,
+    launchAgentRow,
     newTabMenuOpen,
     setNewTabMenuOpen,
     setCreateMenuQuery,
