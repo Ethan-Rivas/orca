@@ -1,42 +1,13 @@
 import type { AppState } from '../types'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
-import {
-  agentTurnEndedUncleanly,
-  agentVerdictFields
-} from '../../../../shared/agent-main-agent-verdict'
-import {
-  getAgentResumeArgv,
-  isResumableTuiAgent,
-  type SleepingAgentLaunchConfig,
-  type SleepingAgentSessionRecord
+import { agentTurnEndedUncleanly } from '../../../../shared/agent-main-agent-verdict'
+import type {
+  SleepingAgentLaunchConfig,
+  SleepingAgentSessionRecord
 } from '../../../../shared/agent-session-resume'
+import { resumeRecordFromStatus } from '../../../../shared/agent-resume-record-from-status'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import { findTabForAgentEntry } from './agent-status-pane-key-tab-binding'
-
-export function copyLaunchConfig(config: SleepingAgentLaunchConfig): SleepingAgentLaunchConfig {
-  return {
-    ...(config.agentCommand ? { agentCommand: config.agentCommand } : {}),
-    agentArgs: config.agentArgs,
-    agentEnv: { ...config.agentEnv },
-    ...(config.ompResumeFilePath ? { ompResumeFilePath: config.ompResumeFilePath } : {}),
-    ...(config.claudeAccountId ? { claudeAccountId: config.claudeAccountId } : {})
-  }
-}
-
-/**
- * Main's pinned account for a Claude record whose launch config lacks one: after a restart this
- * renderer's launch record is gone while main's pinned registry survives, so a later resume must
- * not fall back to the project's current default. Kept apart from the launch config so current
- * settings are never recorded as the session's original launch options.
- */
-function mainPinnedClaudeAccountFallback(
-  entry: AgentStatusEntry,
-  launchConfig: SleepingAgentLaunchConfig | undefined
-): string | undefined {
-  return entry.agentType === 'claude' && !launchConfig?.claudeAccountId
-    ? entry.claudeAccountId
-    : undefined
-}
 
 export function sleepingRecordFromEntry(args: {
   state: AppState
@@ -47,49 +18,11 @@ export function sleepingRecordFromEntry(args: {
   launchConfig?: SleepingAgentLaunchConfig
   origin?: SleepingAgentSessionRecord['origin']
 }): SleepingAgentSessionRecord | null {
-  const agent = args.entry.agentType
-  if (
-    args.entry.terminalResumeEligible === false ||
-    !isResumableTuiAgent(agent) ||
-    !args.entry.providerSession
-  ) {
-    return null
-  }
-  if (!getAgentResumeArgv(agent, args.entry.providerSession)) {
-    return null
-  }
-  const tab = args.tab ?? findTabForAgentEntry(args.state, args.worktreeId, args.entry)
-  const pinnedClaudeAccountId = mainPinnedClaudeAccountFallback(args.entry, args.launchConfig)
-  return {
-    paneKey: args.entry.paneKey,
-    ...(tab ? { tabId: tab.id } : {}),
-    worktreeId: args.worktreeId,
-    agent,
-    providerSession: args.entry.providerSession,
-    ...(args.entry.connectionId !== undefined ? { connectionId: args.entry.connectionId } : {}),
-    prompt: args.entry.prompt,
-    state: args.entry.state,
-    capturedAt: args.capturedAt,
-    updatedAt: args.entry.updatedAt,
-    ...((args.entry.terminalTitle ?? tab?.title)
-      ? { terminalTitle: (args.entry.terminalTitle ?? tab?.title)! }
-      : {}),
-    ...(args.entry.lastAssistantMessage
-      ? { lastAssistantMessage: args.entry.lastAssistantMessage }
-      : {}),
-    ...(args.launchConfig
-      ? {
-          launchConfig: {
-            ...copyLaunchConfig(args.launchConfig),
-            ...(pinnedClaudeAccountId ? { claudeAccountId: pinnedClaudeAccountId } : {})
-          }
-        }
-      : pinnedClaudeAccountId
-        ? { claudeAccountId: pinnedClaudeAccountId }
-        : {}),
-    ...agentVerdictFields(args.entry),
-    ...(args.origin ? { origin: args.origin } : {})
-  }
+  const { state, tab, ...record } = args
+  return resumeRecordFromStatus({
+    ...record,
+    tabOf: () => tab ?? findTabForAgentEntry(state, args.worktreeId, args.entry)
+  })
 }
 
 export type CollectSleepingAgentSessionRecordsOptions = {

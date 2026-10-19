@@ -8,8 +8,6 @@ import type {
 } from '../../../../shared/agent-status-types'
 import {
   agentProviderSessionsEqual,
-  getAgentResumeArgv,
-  isResumableTuiAgent,
   type AgentProviderSessionMetadata,
   type SleepingAgentLaunchConfig,
   type SleepingAgentSessionRecord
@@ -31,6 +29,11 @@ import { mergeCurrentOrchestrationContext } from './agent-status-orchestration-c
 import { deriveAgentStatusLiveFacts } from './agent-status-live-facts'
 import { claudeAccountIdField } from './agent-status-claude-account'
 import { liveEntryChildFields } from './agent-status-live-entry-children'
+import {
+  canReuseStatusProviderSession,
+  recordLaunchConfigForStatus,
+  statusRetainsResumableIdentity
+} from '../../../../shared/agent-resume-record-from-status'
 
 export type AgentStatusLiveEntryBuild = {
   entry: AgentStatusEntry
@@ -147,9 +150,10 @@ export function buildAgentStatusLiveEntry(
     payloadMergedOrchestration ??
     runtimeMergedOrchestration ??
     (payload.state === 'done' ? existing?.orchestration : undefined)
-  const canReuseExistingProviderSession =
-    existing?.agentType === identity.agentType &&
-    (existing.state !== 'done' || payload.state === 'done')
+  const canReuseExistingProviderSession = canReuseStatusProviderSession(existing, {
+    agentType: identity.agentType,
+    state: payload.state
+  })
   const providerSession =
     metadata?.providerSession ??
     (canReuseExistingProviderSession ? existing.providerSession : undefined)
@@ -179,22 +183,16 @@ export function buildAgentStatusLiveEntry(
   })
   const matchedRegistryLaunchConfig = registryMatched ? registryEntry?.launchConfig : undefined
   const existingSleepingRecord = state.sleepingAgentSessionsByPaneKey[paneKey]
-  const retainsResumableRecoveryIdentity =
-    payload.state === 'done' &&
-    isResumableTuiAgent(identity.agentType) &&
-    providerSession !== undefined &&
-    getAgentResumeArgv(identity.agentType, providerSession) !== null
+  const retainsResumableRecoveryIdentity = statusRetainsResumableIdentity(
+    { agentType: identity.agentType, state: payload.state },
+    providerSession
+  )
   const matchedSleepingLaunchConfig =
-    (payload.state !== 'done' || retainsResumableRecoveryIdentity) &&
-    existingSleepingRecord?.launchConfig &&
-    existingSleepingRecord.agent === identity.agentType &&
-    providerSession &&
-    agentProviderSessionsEqual(
-      identity.agentType,
-      existingSleepingRecord.providerSession,
-      providerSession
-    )
-      ? existingSleepingRecord.launchConfig
+    payload.state !== 'done' || retainsResumableRecoveryIdentity
+      ? recordLaunchConfigForStatus(existingSleepingRecord, {
+          agentType: identity.agentType,
+          providerSession
+        })
       : undefined
   const launchConfigSource =
     (payload.state !== 'done' && !providerSessionChanged && metadata?.launchToken

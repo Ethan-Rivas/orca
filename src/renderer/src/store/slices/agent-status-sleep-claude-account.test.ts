@@ -7,7 +7,7 @@ import { createTestStore, makeTab } from './store-test-helpers'
 import {
   recoveryRecordMatches,
   sleepingRecordsEquivalentIgnoringCaptureTime
-} from './agent-status-recovery-equivalence'
+} from '../../../../shared/agent-resume-record-equivalence'
 
 const NOW = 1_800_000_000_000
 const PANE_KEY = 'tab-1:leaf-1'
