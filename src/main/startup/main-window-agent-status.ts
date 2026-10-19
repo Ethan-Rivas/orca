@@ -40,7 +40,9 @@ export function installMainWindowAgentStatusListeners(options: MainWindowAgentSt
       observation,
       isReplay,
       authorityRestartId,
-      structuredHost
+      structuredHost,
+      programStatus,
+      programStatusOnly
     }) => {
       if (state.mainWindow?.isDestroyed()) {
         return
@@ -94,12 +96,17 @@ export function installMainWindowAgentStatusListeners(options: MainWindowAgentSt
         ...(observation ? { observation } : {}),
         ...(orchestration ? { orchestration } : {}),
         ...(claudeAccountId ? { claudeAccountId } : {}),
+        ...(programStatus ? { programStatus } : {}),
+        ...(programStatusOnly === true ? { programStatusOnly: true } : {}),
         // Why: reconnect replays re-send cached rows; the renderer must not treat them as fresh completions.
         ...(isReplay === true ? { isReplay: true } : {})
       }
       state.mainWindow?.webContents.send('agentStatus:set', statusEvent)
       getDashboardPopoutWindow()?.webContents.send('agentStatus:set', statusEvent)
-      options.onRecordAgentState(payload.agentType ?? 'unknown', payload.state)
+      // A facet-only republish (progress tick) is not a state the agent entered.
+      if (programStatusOnly !== true) {
+        options.onRecordAgentState(payload.agentType ?? 'unknown', payload.state)
+      }
     }
   )
   agentHookServer.setPaneStatusClearListener((clear) => {

@@ -8,6 +8,7 @@ import type {
   ParsedAgentStatusPayload
 } from '../../../../shared/agent-status-types'
 import type { AgentStatusObservation } from '../../../../shared/agent-status-observation'
+import type { ProgramStatusFacet } from '../../../../shared/program-status/facet'
 import type {
   AgentProviderSessionMetadata,
   ResumableTuiAgent,
@@ -84,6 +85,8 @@ export type AgentStatusPayload = ParsedAgentStatusPayload & {
   /** Main's pinned account for the pane: null when main published the row unpinned, undefined
    *  from renderer-local writers, which keep the row's current value. */
   claudeAccountId?: string | null
+  /** `null` clears the facet; absent keeps it (the writer has no facet channel, e.g. renderer OSC). */
+  programStatus?: ProgramStatusFacet | null
 }
 
 export type AgentStatusTiming = {
@@ -144,7 +147,18 @@ export type AgentProviderSessionUpdate = {
   metadata?: AgentProviderSessionRecordMetadata
 }
 
-export type AgentStatusBatchUpdate = AgentStatusUpdate | AgentProviderSessionUpdate
+/** Patch only a live row's OSC 7501 facet; no state, timing, notification or attention effects. */
+export type AgentProgramStatusUpdate = {
+  kind: 'programStatus'
+  paneKey: string
+  /** `null` clears the facet. */
+  programStatus: ProgramStatusFacet | null
+}
+
+export type AgentStatusBatchUpdate =
+  | AgentStatusUpdate
+  | AgentProviderSessionUpdate
+  | AgentProgramStatusUpdate
 
 export type AgentStatusBatchTransaction = {
   getState: () => AppState

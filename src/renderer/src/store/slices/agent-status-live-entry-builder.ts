@@ -201,6 +201,8 @@ export function buildAgentStatusLiveEntry(
     matchedRegistryLaunchConfig ??
     matchedSleepingLaunchConfig
   const mainAgent = resolveAgentStatusLiveEntryMainAgent(existing, payload, identity.agentType)
+  const programStatus =
+    payload.programStatus === undefined ? existing?.programStatus : payload.programStatus
   const entry: AgentStatusEntry = {
     state: payload.state,
     workingMode: payload.workingMode,
@@ -255,6 +257,7 @@ export function buildAgentStatusLiveEntry(
     ...claudeAccountIdField(existing, payload, identity.agentType),
     acceptedStatusSeq: (existing?.acceptedStatusSeq ?? 0) + 1,
     ...(payload.observation ? { observation: payload.observation } : {}),
+    ...(programStatus ? { programStatus } : {}),
     interrupted: payload.interrupted,
     sessionBoundary:
       payload.sessionBoundary ??
