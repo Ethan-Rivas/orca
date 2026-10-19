@@ -19,7 +19,7 @@ import {
 } from '../pane/launch-authority'
 import type { PtyIpcSpawnState } from './spawn-state'
 import { persistPtyIpcSpawnCommit, publishPtyIpcSpawnCommit } from './spawn-commit-persist'
-import { admitPtyReattachOwnership, registerPersistedPtySpawn } from '../pane/spawn-registration'
+import { admitPtySpawnOwnership, registerPersistedPtySpawn } from '../pane/spawn-registration'
 import { reflowHeadlessTerminalToCommittedGrid } from '../delivery/attached-pty-size'
 import { seedHeadlessTerminalFromSpawnResult } from '../pane/terminal-spawn-restore'
 import { markNativeWindowsConptyPty } from '../../../runtime/terminal-model-query-authority'
@@ -34,7 +34,7 @@ async function commitReservedPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpaw
   if (ctx.isClaudeLaunch && !ctx.stablePaneOwner) {
     markClaudePtySpawnedForAuth(ctx.result.id, ctx.claudeAuth)
   }
-  admitPtyReattachOwnership(ctx.deps.runtime, ctx.result)
+  admitPtySpawnOwnership(ctx.deps.runtime, ctx.result)
   if (ctx.nativeWindowsConptySpawn) {
     markNativeWindowsConptyPty(ctx.result.id)
   }

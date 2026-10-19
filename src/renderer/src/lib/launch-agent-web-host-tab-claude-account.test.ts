@@ -56,7 +56,8 @@ it('carries the Claude account to the host even without a prompt', async () => {
     expect.objectContaining({
       agent: 'claude',
       launchConfig: expect.objectContaining({ claudeAccountId: 'acct-2' })
-    })
+    }),
+    expect.anything()
   )
 })
 
