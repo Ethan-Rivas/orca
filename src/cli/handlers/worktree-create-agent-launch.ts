@@ -1,7 +1,7 @@
 /**
  * `worktree create --agent`: the worktree and its agent in one `agent.launch`, so the agent follows
- * the user's Chat UI setting like every other launch. A host older than `agent.launch` gets the
- * create's own startup terminal, which cannot take a model or effort.
+ * `--surface`, else the user's Chat UI setting, like every other launch. A host older than
+ * `agent.launch` gets the create's own startup terminal, which cannot take a model, effort or surface.
  */
 
 import type { AgentLaunchResult } from '../../shared/agent-launch-intent'
@@ -15,7 +15,8 @@ import {
   formatAgentLaunch,
   hasLaunchModelFlags,
   getAgentLaunchCapabilities,
-  type CliAgentLaunch
+  type CliAgentLaunch,
+  SURFACE_UNSUPPORTED_MESSAGE
 } from '../agent-launch-request'
 import { formatWorktreeShow, printResult } from '../format'
 import { RuntimeClientError, type RuntimeClient } from '../runtime-client'
@@ -44,10 +45,10 @@ export async function createWorktreeWithAgent(args: {
   rawArgs?: readonly string[]
 }): Promise<void> {
   const { client, flags, create, launch, claudeAccount, json, rawArgs } = args
-  if (claudeAccount && (launch.operationId || hasLaunchModelFlags(flags))) {
+  if (claudeAccount && (launch.operationId || launch.surface || hasLaunchModelFlags(flags))) {
     throw new RuntimeClientError(
       'invalid_argument',
-      '--account cannot be combined with --model, --effort or --retry-launch.'
+      '--account cannot be combined with --model, --effort, --surface or --retry-launch.'
     )
   }
   const capabilities = claudeAccount ? undefined : await getAgentLaunchCapabilities(client)
@@ -67,6 +68,9 @@ export async function createWorktreeWithAgent(args: {
         'incompatible_runtime',
         'This Orca host cannot start an agent on a chosen model or effort. Update Orca on the execution host, or omit --model and --effort.'
       )
+    }
+    if (launch.surface) {
+      throw new RuntimeClientError('incompatible_runtime', SURFACE_UNSUPPORTED_MESSAGE)
     }
     const params = {
       ...create,

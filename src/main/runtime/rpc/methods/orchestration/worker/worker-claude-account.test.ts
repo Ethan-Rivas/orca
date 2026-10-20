@@ -5,6 +5,7 @@ import { createWorkerLaunchReceipt, withWorkerLaunchAccount } from './worker-lau
 import { prepareLocalWorkerStart } from './worker-start-validation'
 import { decideWorkerStartMode } from '../../orchestration-worker-start-mode'
 import { assertClaudeAccountWorktreeIsLocal } from './worker-claude-account-placement'
+import { decideAgentLaunchMode } from '../../../../../agent-launch/agent-launch-mode'
 
 function account(id: string, email: string): ClaudeManagedAccountSummary {
   return {
@@ -108,6 +109,16 @@ describe('worker-start --account', () => {
       reason: 'pinned_claude_account'
     })
     expect(mode.detail).toContain('--account')
+  })
+
+  it('refuses an explicit chat request instead of starting it on another account', () => {
+    expect(() =>
+      decideAgentLaunchMode({
+        placement: { agent: 'claude', claudeAccount: 'acct-b' },
+        settings: null,
+        surface: 'chat'
+      })
+    ).toThrow(/can't open as a chat/)
   })
 
   it('refuses an SSH workspace placement', async () => {
