@@ -1,4 +1,5 @@
 import { paneIdentity } from './runtime-terminal-pane-identity'
+import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { shouldSeedWorktreePrimaryTerminal } from '../../shared/worktree-first-surface'
 import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
 import type { Repo } from '../../shared/repo-types'
@@ -101,10 +102,12 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
     wrappedSetupCommand = sequenced.setupCommand
   }
 
-  if (sequencedStartup && ports.canSpawn) {
+  // Switch point: main starts the agent even with no terminal service, so its pane shows why not.
+  if (sequencedStartup && (ports.canSpawn || ORCA_LAYOUT_OWNER_IS_MAIN)) {
     try {
-      if (args.startupLaunchRuntime instanceof Error) {
-        throw args.startupLaunchRuntime
+      const launchRuntime = args.startupLaunchRuntime
+      if (launchRuntime instanceof Error && !ORCA_LAYOUT_OWNER_IS_MAIN) {
+        throw launchRuntime
       }
       const terminal = await ports.createTerminal(`id:${worktree.id}`, {
         command: sequencedStartup.command,
@@ -115,10 +118,16 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
         ...(sequencedStartup.launchConfig ? { launchConfig: sequencedStartup.launchConfig } : {}),
         ...(args.createdWithAgent ? { launchAgent: args.createdWithAgent } : {}),
         ...(args.startupClaudeAccountId ? { claudeAccountId: args.startupClaudeAccountId } : {}),
-        ...(args.startupLaunchRuntime ? { launchRuntime: args.startupLaunchRuntime } : {}),
+        ...(launchRuntime instanceof Error
+          ? { startFailure: launchRuntime }
+          : launchRuntime
+            ? { launchRuntime }
+            : {}),
         ...(sequencedStartup.viewMode ? { viewMode: sequencedStartup.viewMode } : {}),
         startupCommandDelivery: sequencedStartup.startupCommandDelivery,
         telemetry: sequencedStartup.telemetry,
+        // Switch point: a start main could not make stays in its pane, showing why.
+        ...(ORCA_LAYOUT_OWNER_IS_MAIN ? { keepPaneOnStartFailure: true as const } : {}),
         ...ownerSurfacing(shouldActivate)
       })
       if (args.draftPaste) {
@@ -137,6 +146,9 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
     }
   }
 
+  // Switch point: a failed agent start keeps its pane, so no extra shell is seeded beside it.
+  const startupPaneHeld =
+    didSpawnStartup || (ORCA_LAYOUT_OWNER_IS_MAIN && Boolean(sequencedStartup))
   if (shouldActivate) {
     const provisionInBackground = ports.provisionInBackground?.() === true
     // Why: a failed agent start hands the whole create to the window, which seeds the agent's tab
@@ -145,7 +157,8 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
     const agentStartFailed =
       Boolean(sequencedStartup && ports.canSpawn && !didSpawnStartup) &&
       !args.startupClaudeAccountId
-    if (agentStartFailed && !provisionInBackground) {
+    // Switch point: main provisions whether or not a window is open; no window takes over.
+    if (!ORCA_LAYOUT_OWNER_IS_MAIN && agentStartFailed && !provisionInBackground) {
       ports.activate(repo.id, worktree.id, startup, setup, defaultTabs)
     } else {
       let failedSetup: CreateWorktreeResult['setup']
@@ -156,7 +169,7 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
           Boolean(setup || defaultTabs))
       if (runtimeWillProvision) {
         const provisioned = await ports.provision({
-          ...provisionArgs(args, startupTerminalHandle, didSpawnStartup, wrappedSetupCommand),
+          ...provisionArgs(args, startupTerminalHandle, startupPaneHeld, wrappedSetupCommand),
           ...(provisionInBackground ? { surfaceOwner: false as const } : {})
         })
         didSpawnSetup = provisioned.setupSpawned
@@ -171,16 +184,21 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
       ports.activate(
         repo.id,
         worktree.id,
-        // Why: the renderer's fallback launch cannot honour --account; it would use the active one.
-        startup && !didSpawnStartup && !args.startupClaudeAccountId ? startup : undefined,
-        failedSetup,
+        // Switch point: a start main could not make stays main's to show, never the window's.
+        // Why the account check: the renderer's fallback launch cannot honour --account.
+        ORCA_LAYOUT_OWNER_IS_MAIN || args.startupClaudeAccountId
+          ? undefined
+          : startup && !didSpawnStartup
+            ? startup
+            : undefined,
+        ORCA_LAYOUT_OWNER_IS_MAIN ? undefined : failedSetup,
         undefined,
         ...(args.promisedAgentChat && !startup ? ([true] as const) : [])
       )
     }
   } else if (ports.canSpawn && (setup || defaultTabs || didSpawnStartup)) {
     const provisioning = ports.provision({
-      ...provisionArgs(args, startupTerminalHandle, didSpawnStartup, wrappedSetupCommand),
+      ...provisionArgs(args, startupTerminalHandle, startupPaneHeld, wrappedSetupCommand),
       surfaceOwner: false
     })
     if (request.awaitTerminalProvisioning) {
@@ -196,7 +214,7 @@ export async function startRuntimeLocalWorktreeTerminals(args: {
   } else if (
     ports.canSpawn &&
     shouldSeedWorktreePrimaryTerminal({
-      hasPrimarySurface: didSpawnStartup,
+      hasPrimarySurface: startupPaneHeld,
       callerProvidesSurface: callerProvidesInitialSurface(args)
     })
   ) {

@@ -1,4 +1,5 @@
 import { paneIdentity } from './runtime-terminal-pane-identity'
+import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { shouldSeedWorktreePrimaryTerminal } from '../../shared/worktree-first-surface'
 import { randomUUID } from 'node:crypto'
 import { getProjectHostSetupWorktreeMeta } from '../../shared/project-host-setup-lookup'
@@ -20,6 +21,7 @@ import type {
   WorktreeStartupDraftPaste,
   WorktreeStartupFollowup
 } from './runtime-worktree-agent-startup'
+import { hostWorktreeTargetForRepo } from '../persistence/host-qualified-worktree-meta'
 
 type RuntimeFolderWorktreeCreateDeps = {
   store: RuntimeStore
@@ -76,7 +78,7 @@ export async function createRuntimeFolderWorktree(args: {
     request.nameWasGenerated === true
   )
   const resolvedFolderDisplayName = displayNameRequest.value
-  const meta = deps.store.setWorktreeMeta(worktreeId, {
+  const meta = deps.store.setWorktreeMeta(hostWorktreeTargetForRepo(worktreeId, repo), {
     instanceId,
     ...getProjectHostSetupWorktreeMeta(deps.store.getProjectHostSetups?.() ?? [], repo),
     displayName: resolvedFolderDisplayName ?? request.name,
@@ -140,10 +142,12 @@ export async function createRuntimeFolderWorktree(args: {
   let warning: string | undefined
   let didSpawnStartup = false
   let startupTerminal: CreateWorktreeResult['startupTerminal']
-  if (args.startup && deps.ptySpawnAvailable) {
+  // Switch point: main starts the agent even with no terminal service, so its pane shows why not.
+  if (args.startup && (deps.ptySpawnAvailable || ORCA_LAYOUT_OWNER_IS_MAIN)) {
     try {
-      if (args.startupLaunchRuntime instanceof Error) {
-        throw args.startupLaunchRuntime
+      const launchRuntime = args.startupLaunchRuntime
+      if (launchRuntime instanceof Error && !ORCA_LAYOUT_OWNER_IS_MAIN) {
+        throw launchRuntime
       }
       const terminal = await deps.createTerminal(`id:${worktree.id}`, {
         command: args.startup.command,
@@ -153,10 +157,16 @@ export async function createRuntimeFolderWorktree(args: {
         ...(args.startup.launchConfig ? { launchConfig: args.startup.launchConfig } : {}),
         ...(args.createdWithAgent ? { launchAgent: args.createdWithAgent } : {}),
         ...(args.startupClaudeAccountId ? { claudeAccountId: args.startupClaudeAccountId } : {}),
-        ...(args.startupLaunchRuntime ? { launchRuntime: args.startupLaunchRuntime } : {}),
+        ...(launchRuntime instanceof Error
+          ? { startFailure: launchRuntime }
+          : launchRuntime
+            ? { launchRuntime }
+            : {}),
         ...(args.startup.viewMode ? { viewMode: args.startup.viewMode } : {}),
         startupCommandDelivery: args.startup.startupCommandDelivery,
         telemetry: args.startup.telemetry,
+        // Switch point: a start main could not make stays in its pane, showing why.
+        ...(ORCA_LAYOUT_OWNER_IS_MAIN ? { keepPaneOnStartFailure: true as const } : {}),
         ...(shouldActivate ? {} : { surfaceOwner: false })
       })
       if (args.draftPaste) {
@@ -185,8 +195,13 @@ export async function createRuntimeFolderWorktree(args: {
       repo.id,
       worktree.id,
       undefined,
-      // Why: the renderer's fallback launch cannot honour --account; it would use the active one.
-      args.startup && !didSpawnStartup && !args.startupClaudeAccountId ? args.startup : undefined,
+      // Switch point: a start main could not make stays main's to show, never the window's.
+      // Why the account check: the renderer's fallback launch cannot honour --account; it would use the active one.
+      ORCA_LAYOUT_OWNER_IS_MAIN
+        ? undefined
+        : args.startup && !didSpawnStartup && !args.startupClaudeAccountId
+          ? args.startup
+          : undefined,
       ...(args.promisedAgentChat && !args.startup ? ([true] as const) : [])
     )
   }
@@ -194,7 +209,8 @@ export async function createRuntimeFolderWorktree(args: {
     (!shouldActivate || deps.provisionInBackground?.() === true) &&
     deps.ptySpawnAvailable &&
     shouldSeedWorktreePrimaryTerminal({
-      hasPrimarySurface: didSpawnStartup,
+      // Switch point: a failed agent start keeps its pane, so no shell is seeded beside it.
+      hasPrimarySurface: didSpawnStartup || (ORCA_LAYOUT_OWNER_IS_MAIN && Boolean(args.startup)),
       // Background attribution-only creates have historically omitted the shell.
       callerProvidesSurface: args.promisedAgentChat === true || args.createdWithAgent !== undefined
     })
