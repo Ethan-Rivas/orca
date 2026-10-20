@@ -36,7 +36,11 @@ import {
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { WorkspaceLaunchKind } from '../../shared/workspace-launch-kind'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { resolveProjectClaudeAccount } from '../claude-accounts/project-claude-account-resolution'
+import {
+  PROJECT_CLAUDE_ACCOUNT_DETAIL,
+  projectClaudeAccountForLaunch,
+  type AgentLaunchModeHostRuntime
+} from './agent-launch-project-claude-account'
 import type { AgentLaunchSurface } from '../../shared/agent-launch-surface'
 import { formatAgentTypeLabel } from '../../shared/agent-type-label'
 import { AgentLaunchSurfaceUnavailableError } from './agent-launch-surface-refusal'
@@ -218,12 +222,6 @@ export function decideAgentLaunchMode(args: {
  * can create a structured session there. Only a conclusive refusal before launch effects can
  * reject an explicit chat; a materialized workspace retains its terminal fallback.
  */
-export type AgentLaunchModeHostRuntime = Pick<
-  OrcaRuntimeService,
-  'getStructuredAgentSessionCreateSupport'
-> &
-  Partial<Pick<OrcaRuntimeService, 'listRepos'>>
-
 export async function resolveAgentLaunchModeOnHost(
   runtime: AgentLaunchModeHostRuntime,
   receipt: AgentLaunchModeReceipt,
@@ -253,49 +251,16 @@ export async function resolveAgentLaunchModeOnHost(
     vocabulary,
     context ? { ...context, agent } : undefined
   )
-  return downgradeAgentLaunchModeForProjectClaudeAccount(
-    runtime,
-    settled,
-    worktreeId,
-    agent,
-    vocabulary,
-    context
-  )
-}
-
-/**
- * The project's saved Claude account pins the terminal spawn, and a structured session has no way
- * to run on it, so a host-side launch downgrades the way the renderer's own plan does. Read after
- * the host verdict so an SSH or WSL workspace, which never pins, keeps its own reason.
- */
-function downgradeAgentLaunchModeForProjectClaudeAccount(
-  runtime: Partial<Pick<OrcaRuntimeService, 'listRepos'>>,
-  receipt: AgentLaunchModeReceipt,
-  worktreeId: string,
-  agent: TuiAgent | undefined,
-  vocabulary: AgentLaunchModeVocabulary,
-  context?: AgentLaunchModeSettlement
-): AgentLaunchModeReceipt {
-  if (receipt.mode !== 'structured' || agent !== 'claude') {
-    return receipt
+  // Why after the host verdict: an SSH or WSL workspace, which never pins, keeps its own reason.
+  if (settled.mode !== 'structured' || !projectClaudeAccountForLaunch(runtime, worktreeId, agent)) {
+    return settled
   }
-  const repos = runtime.listRepos?.() ?? []
-  const accountId = resolveProjectClaudeAccount({
-    getRepo: (repoId) => repos.find((repo) => repo.id === repoId),
-    worktreeId
-  })
-  if (!accountId) {
-    return receipt
-  }
-  const requested = receipt.reason === 'requested'
+  const requested = settled.reason === 'requested'
   // Why refused: an explicit chat request must not quietly become a terminal before anything opens.
   return requested && context?.phase === 'before-effects'
     ? unavailableLaunchMode('pinned_claude_account', vocabulary, true, { ...context, agent })
     : downgraded('pinned_claude_account', vocabulary, requested, PROJECT_CLAUDE_ACCOUNT_DETAIL)
 }
-
-const PROJECT_CLAUDE_ACCOUNT_DETAIL =
-  'this project runs Claude on its saved account, which only a terminal can do'
 
 /** A host that cannot answer has not proved it can create one, so the launch stays a PTY agent. */
 async function readStructuredCreateSupport(

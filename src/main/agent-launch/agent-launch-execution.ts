@@ -10,8 +10,8 @@ import type {
   AgentLaunchResult,
   AgentLaunchTarget
 } from '../../shared/agent-launch-intent'
+import type { AgentLaunchModeHostRuntime } from './agent-launch-project-claude-account'
 import type {
-  AgentLaunchModeHostRuntime,
   readAgentLaunchModeSettings,
   AgentLaunchModeReceipt,
   AgentLaunchModeVocabulary

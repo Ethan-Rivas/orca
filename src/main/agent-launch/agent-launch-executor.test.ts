@@ -8,133 +8,12 @@
  * workspace exists.
  */
 
-import { describe, expect, it, vi } from 'vitest'
-import { executeAgentLaunch, type AgentLaunchExecution } from './agent-launch-executor'
+import { describe, expect, it } from 'vitest'
+import { harness, STRUCTURED_PREFERENCE } from './agent-launch-executor.test-fixture'
 import { AgentLaunchStructuredSessionRefusedError } from './agent-launch-surface-factories'
 import type { AgentLaunchIntent, AgentLaunchResult } from '../../shared/agent-launch-intent'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
 import { readCreatedWorkspaceLaunch } from './agent-launch-created-workspace'
-
-const STRUCTURED_PREFERENCE = {
-  experimentalNativeChat: true
-}
-
-function harness(options: {
-  settings?: Record<string, unknown> | null
-  createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
-  createSupportThrows?: boolean
-  structuredCreateError?: Error
-  terminalCreateError?: Error
-  deliveredMessageId?: string | null
-  terminalPromptDelivered?: boolean
-  repos?: { id: string; agentAccounts?: unknown }[]
-  /** Whether the surface reports that its typed line took the offered prompt. */
-  lineCarriesPrompt?: boolean
-  worktreeCreateError?: Error
-  onStructuredCreate?: () => void
-  onStructuredPromptDelivery?: () => void
-  onSurfacePublished?: AgentLaunchExecution['onSurfacePublished']
-  /** A worktree-only factory, as orchestration workers and `worktree.create` pass. */
-  worktreeOnlyFactory?: boolean
-}) {
-  const calls: string[] = []
-  const carried = (startupPrompt: string | undefined) =>
-    startupPrompt && (options.lineCarriesPrompt ?? true) ? { promptRodeLaunchCommand: true } : {}
-  const createWorktree = vi.fn(
-    async (args: {
-      create: Record<string, unknown>
-      startupAgent: string | undefined
-      promisedAgentChat?: boolean
-      startupPrompt?: string
-      onWorkspaceCreated?: (worktreeId: string) => void
-    }) => {
-      calls.push(`createWorktree(startupAgent=${String(args.startupAgent)})`)
-      args.onWorkspaceCreated?.('wt-new')
-      if (options.worktreeCreateError) {
-        throw options.worktreeCreateError
-      }
-      return {
-        worktreeId: 'wt-new',
-        workspacePath: '/repo/task',
-        connectionId: null,
-        startupTerminalHandle: args.startupAgent ? 'term_agent_first' : undefined,
-        ...carried(args.startupPrompt)
-      }
-    }
-  )
-  const createFolderWorkspace = vi.fn(async (_args: { create: Record<string, unknown> }) => {
-    calls.push('createFolderWorkspace')
-    return { worktreeId: 'folder:fw-new', workspacePath: '/repo/task', connectionId: null }
-  })
-  const createRecoveryShell = vi.fn(async (_worktreeId: string) => {
-    calls.push('createRecoveryShell')
-  })
-  const getStructuredAgentSessionCreateSupport = vi.fn(async () => {
-    calls.push('createSupport')
-    if (options.createSupportThrows) {
-      throw new Error('host unreachable')
-    }
-    return options.createSupport ?? { supported: true }
-  })
-  const createStructuredSession = vi.fn(async () => {
-    calls.push('createStructuredSession')
-    options.onStructuredCreate?.()
-    if (options.structuredCreateError) {
-      throw options.structuredCreateError
-    }
-    return { sessionId: 'sess-1', handle: 'handle_structured', fence: 4 }
-  })
-  const createTerminalAgent = vi.fn(async (args: { startupPrompt?: string }) => {
-    calls.push('createTerminalAgent')
-    if (options.terminalCreateError) {
-      throw options.terminalCreateError
-    }
-    return { handle: 'term_1', ...carried(args.startupPrompt) }
-  })
-  const deliverStructuredPrompt = vi.fn(async () => {
-    calls.push('deliverStructuredPrompt')
-    options.onStructuredPromptDelivery?.()
-    return options.deliveredMessageId === undefined ? 'msg-1' : options.deliveredMessageId
-  })
-  const deliverTerminalPrompt = vi.fn(async () => {
-    calls.push('deliverTerminalPrompt')
-    return options.terminalPromptDelivered ?? true
-  })
-  const runtime = {
-    requireStore: () => ({
-      getSettings: () => (options.settings === undefined ? STRUCTURED_PREFERENCE : options.settings)
-    }),
-    getStructuredAgentSessionCreateSupport,
-    listRepos: () => options.repos ?? []
-  }
-  return {
-    calls,
-    runtime,
-    createWorktree,
-    createFolderWorkspace,
-    createRecoveryShell,
-    createStructuredSession,
-    createTerminalAgent,
-    deliverStructuredPrompt,
-    deliverTerminalPrompt,
-    run: (intent: AgentLaunchIntent) =>
-      executeAgentLaunch({
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements only the runtime methods the executor reaches, and each test asserts the calls made, so an omitted method throws rather than reading a wrong value.
-        runtime: runtime as unknown as AgentLaunchExecution['runtime'],
-        intent,
-        surfaces: {
-          createStructuredSession,
-          createTerminalAgent,
-          deliverStructuredPrompt,
-          deliverTerminalPrompt
-        },
-        workspaces: options.worktreeOnlyFactory
-          ? { createWorktree, createRecoveryShell }
-          : { createWorktree, createFolderWorkspace, createRecoveryShell },
-        ...(options.onSurfacePublished ? { onSurfacePublished: options.onSurfacePublished } : {})
-      })
-  }
-}
 
 const CREATE_INTENT: AgentLaunchIntent = {
   agent: 'claude',
@@ -412,42 +291,6 @@ describe('a launch into a workspace that already exists', () => {
       expect(result.receipt).toMatchObject({ mode: 'terminal', reason: 'reused_terminal' })
     }
   )
-})
-
-describe('a launch into a project with a saved Claude account', () => {
-  const PINNED_REPO = {
-    id: 'repo-1',
-    agentAccounts: { claude: { mode: 'account', accountId: 'acct-b' } }
-  }
-  const EXISTING = { kind: 'existing', worktree: 'repo-1::/repo-1' } as const
-
-  it('downgrades a structured Claude launch to a terminal the spawn pins', async () => {
-    const h = harness({ repos: [PINNED_REPO] })
-    const result = await h.run({ agent: 'claude', target: EXISTING })
-    expect(h.calls).toEqual(['createSupport', 'createTerminalAgent'])
-    expect(result.receipt).toMatchObject({
-      mode: 'terminal',
-      preferred: 'structured',
-      reason: 'pinned_claude_account'
-    })
-    expect(result.receipt.detail).toContain('saved account')
-  })
-
-  it("keeps the host's own reason when the workspace could never pin", async () => {
-    const h = harness({
-      repos: [PINNED_REPO],
-      createSupport: { supported: false, reason: 'remote' }
-    })
-    const result = await h.run({ agent: 'claude', target: EXISTING })
-    expect(result.receipt).toMatchObject({ reason: 'remote_execution_host' })
-  })
-
-  it('leaves Codex and an unpinned project structured', async () => {
-    const codex = harness({ repos: [PINNED_REPO] })
-    expect((await codex.run({ agent: 'codex', target: EXISTING })).receipt.mode).toBe('structured')
-    const ask = harness({ repos: [{ id: 'repo-1', agentAccounts: { claude: { mode: 'ask' } } }] })
-    expect((await ask.run({ agent: 'claude', target: EXISTING })).receipt.mode).toBe('structured')
-  })
 })
 
 describe('an agent with no structured session', () => {
