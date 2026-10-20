@@ -17,9 +17,12 @@ vi.mock('@/store', () => ({
 }))
 
 vi.mock('@/runtime/web-runtime-terminal-creation', () => ({
-  createWebRuntimeSessionTerminal: mockCreateTerminal,
   createWebRuntimeAgentSessionTerminal: vi.fn(),
   createWebRuntimeAgentSessionTerminalWithLaunchDraft: vi.fn()
+}))
+
+vi.mock('@/runtime/web-runtime-terminal-create-operation', () => ({
+  createWebRuntimeSessionTerminalResult: mockCreateTerminal
 }))
 
 const STARTUP_PLAN: AgentStartupPlan = {
@@ -50,20 +53,19 @@ beforeEach(() => {
 })
 
 it('carries the Claude account to the host even without a prompt', async () => {
-  mockCreateTerminal.mockResolvedValue({ status: 'created' })
+  mockCreateTerminal.mockResolvedValue({ outcome: { status: 'created' } })
   await launch()
   expect(mockCreateTerminal).toHaveBeenCalledWith(
     expect.objectContaining({
       agent: 'claude',
       launchConfig: expect.objectContaining({ claudeAccountId: 'acct-2' })
-    }),
-    expect.anything()
+    })
   )
 })
 
 it('explains a pinned refusal and offers to start on the active account', async () => {
   const refusal = claudePinnedLaunchError('account-missing', 'Account acct-2 is not signed in.')
-  mockCreateTerminal.mockResolvedValue({ status: 'failed', message: refusal.message })
+  mockCreateTerminal.mockResolvedValue({ outcome: { status: 'failed', message: refusal.message } })
   const relaunch = vi.fn()
   await launch(relaunch)
   const [message, options] = mockToastError.mock.calls[0]!
@@ -74,7 +76,7 @@ it('explains a pinned refusal and offers to start on the active account', async 
 })
 
 it('keeps the host message for an unrelated failure', async () => {
-  mockCreateTerminal.mockResolvedValue({ status: 'failed', message: 'host went away' })
+  mockCreateTerminal.mockResolvedValue({ outcome: { status: 'failed', message: 'host went away' } })
   await launch(vi.fn())
   expect(mockToastError).toHaveBeenCalledWith('host went away')
 })

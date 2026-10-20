@@ -74,9 +74,12 @@ export function useTabAgentMenuLaunch({
   onPromptHandedOff,
   disabled,
   onFocusHostTerminal,
+  onFocusChat,
   afterDeferredLaunch
 }: QuickLaunchAgentMenuItemsProps & {
   onFocusHostTerminal?: () => void
+  /** A New Chat opened at once: its composer takes the focus the menu gives back. */
+  onFocusChat?: (tabId: string) => void
   /** Runs after a launch the Claude account prompt delayed past the menu's close. */
   afterDeferredLaunch?: () => void
 }) {
@@ -140,6 +143,10 @@ export function useTabAgentMenuLaunch({
           }
         })
       }
+      if (result.surface.kind === 'local-chat') {
+        onFocusChat?.(result.surface.tabId)
+        return
+      }
       if (result.surface.kind !== 'local-terminal') {
         onFocusHostTerminal?.()
         return
@@ -161,6 +168,7 @@ export function useTabAgentMenuLaunch({
       onPromptDelivered,
       onPromptHandedOff,
       onFocusHostTerminal,
+      onFocusChat,
       afterDeferredLaunch
     ]
   )

@@ -271,8 +271,9 @@ describe('structured chat adoption guard on the launch path', () => {
   })
 
   it('takes the structured path when the chat-default view is selected', async () => {
-    const { launchAgentInNewTab, shouldQueueTerminalFocusAfterMenuClose } =
-      await import('./launch-agent-in-new-tab')
+    const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
+    const { shouldQueueTerminalFocusAfterMenuClose } =
+      await import('./launch-agent-in-new-tab-focus')
 
     const result = launchAgentInNewTab({
       requestId: 'request-1',
@@ -296,10 +297,13 @@ describe('structured chat adoption guard on the launch path', () => {
       'codex',
       'local',
       undefined,
+      undefined,
       undefined
     )
     expect(mockLaunchStructuredCodexSession).toHaveBeenCalledWith(
       expect.objectContaining({ worktreeId: 'wt-1' }),
+      expect.any(Function),
+      false,
       expect.any(Function)
     )
     expect(mockCreateTab).not.toHaveBeenCalled()
@@ -329,6 +333,7 @@ describe('structured chat adoption guard on the launch path', () => {
       'codex',
       'local',
       undefined,
+      undefined,
       undefined
     )
     expect(mockCreateTab).not.toHaveBeenCalled()
@@ -349,6 +354,7 @@ describe('structured chat adoption guard on the launch path', () => {
       'wt-1',
       'claude',
       'local',
+      undefined,
       undefined,
       undefined
     )
