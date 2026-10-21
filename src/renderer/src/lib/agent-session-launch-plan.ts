@@ -36,6 +36,9 @@ import type { AgentLaunchRequestId } from '@/lib/agent-launch-request-id'
 import { relearnHostStructuredAgents } from '@/runtime/host-structured-agents'
 import { awaitLocalRuntimeCapabilities } from '@/runtime/local-runtime-capabilities'
 
+/** Which surface the user picked for one launch: the agent's chat, or its CLI in a terminal. */
+export type AgentLaunchSurface = 'chat' | 'terminal'
+
 type ClaudeAccountRouteArgs = AgentLaunchRouteArgs & {
   /** A one-time account choice; the project's saved account applies when omitted. */
   claudeAccountId?: string
@@ -44,7 +47,7 @@ type ClaudeAccountRouteArgs = AgentLaunchRouteArgs & {
 export type AgentSessionLaunchRequest = ClaudeAccountRouteArgs & {
   /** The user action this launch serves, minted where that action is handled. */
   requestId: AgentLaunchRequestId
-  requestedSurface?: 'chat' | 'terminal'
+  requestedSurface?: AgentLaunchSurface
   selectedExecutionHostId?: ExecutionHostId
   resumeFrom?: StructuredAgentSessionResumeSource
   onPromptDelivered?: () => void
@@ -59,7 +62,7 @@ export type AgentSessionLaunchRequest = ClaudeAccountRouteArgs & {
  */
 export type AgentSessionLaunchVerdict = {
   route: AgentLaunchRoute
-  requestedSurface?: 'chat' | 'terminal'
+  requestedSurface?: AgentLaunchSurface
   /** The user action this launch serves; a re-entry with this verdict is that same action. */
   requestId: AgentLaunchRequestId
   agent: TuiAgent
@@ -212,7 +215,7 @@ function resolvePlannedRoute(
 /** The route a launch would take, for a caller that only branches on it and launches nothing. */
 export function resolveAgentSessionLaunchRoute(
   store: AgentLaunchRouteStore,
-  request: ClaudeAccountRouteArgs
+  request: ClaudeAccountRouteArgs & Pick<AgentSessionLaunchRequest, 'requestedSurface'>
 ): AgentLaunchRoute {
   return resolvePlannedRoute(store, request, buildAgentLaunchRouteInput(store, request))
 }

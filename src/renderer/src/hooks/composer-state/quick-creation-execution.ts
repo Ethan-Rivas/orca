@@ -186,8 +186,9 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
 
       const promptDelivery = quickDraftPrompt ? 'draft' : 'auto-submit'
       // Why: the verdict is persisted on the request as data and re-entered once the worktree exists.
-      const agentLaunchRoute = agent
-        ? resolveAgentSessionLaunchRoute(useAppStore.getState(), {
+      const agentLaunchRoute = !agent
+        ? 'terminal-tui'
+        : resolveAgentSessionLaunchRoute(useAppStore.getState(), {
             agent,
             workspace: {
               kind: selectedRepoIsGit ? 'git-worktree' : 'folder',
@@ -198,9 +199,17 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
             },
             prompt: quickDraftPrompt ?? quickPrompt,
             promptDelivery,
-            claudeAccountId: composerClaudeAccountId
+            claudeAccountId: composerClaudeAccountId,
+            // Why: the menu's pick stands, except that a pinned Claude account still needs a terminal.
+            ...(options?.launchChoice
+              ? {
+                  requestedSurface:
+                    options.launchChoice.route === 'structured-native-chat'
+                      ? ('chat' as const)
+                      : ('terminal' as const)
+                }
+              : {})
           })
-        : 'terminal-tui'
       const structuredLaunch = agentLaunchRoute === 'structured-native-chat'
 
       const request = buildQuickCreationRequest({
