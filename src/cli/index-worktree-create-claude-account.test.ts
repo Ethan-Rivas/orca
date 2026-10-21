@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../shared/protocol-version'
+import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../shared/account-runtime-capabilities'
 
 const {
   callMock,

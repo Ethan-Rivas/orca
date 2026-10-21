@@ -6,7 +6,7 @@ vi.mock('../format', () => ({ printResult: vi.fn() }))
 vi.mock('../selectors', () => ({ getTerminalHandle: vi.fn() }))
 
 import { ORCHESTRATION_HANDLERS } from './orchestration'
-import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../../shared/protocol-version'
+import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../../shared/account-runtime-capabilities'
 
 describe('orchestration worker-start --account', () => {
   beforeEach(() => {

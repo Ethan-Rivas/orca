@@ -1,7 +1,7 @@
 import { getOptionalStringFlag } from '../flags'
 import { RuntimeClientError, type RuntimeClient } from '../runtime-client'
 import type { RuntimeStatus } from '../../shared/runtime-types'
-import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../../shared/protocol-version'
+import { CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY } from '../../shared/account-runtime-capabilities'
 
 /**
  * `--account <id|email>`: the managed Claude account a launch runs on, resolved by the host.
