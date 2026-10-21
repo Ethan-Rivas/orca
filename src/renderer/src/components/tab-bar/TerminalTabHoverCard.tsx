@@ -14,6 +14,7 @@ export function TerminalTabHoverCard({
   agent,
   shell,
   icon,
+  alert,
   children
 }: {
   tab: Pick<TerminalTab, 'id' | 'worktreeId'>
@@ -21,6 +22,7 @@ export function TerminalTabHoverCard({
   agent: TerminalAgent | null
   shell: string | null | undefined
   icon: ReactNode
+  alert?: ReactNode
   children: ReactNode
 }): React.JSX.Element {
   const { label: accountLabel, onTooltipOpenChange } = useClaudeTabAccountLabel(tab)
@@ -34,6 +36,7 @@ export function TerminalTabHoverCard({
       title={title}
       programName={programName}
       icon={icon}
+      alert={alert}
       onOpenChange={onTooltipOpenChange}
     >
       {children}
