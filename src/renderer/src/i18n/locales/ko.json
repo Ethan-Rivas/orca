@@ -6855,7 +6855,6 @@
           "4e32e030b2": "로컬에 저장됩니다. Orca는 사용량 새로 고침을 위해 platform.minimax.io로만 전송합니다.",
           "remoteServerFallback": "원격 서버",
           "loadAccountsFailed": "프로바이더 계정을 불러오지 못했습니다.",
-          "remoteScopeAccounts": "{{value0}}에서 관리하는 계정을 표시하고 있습니다. 계정 추가나 재인증은 해당 서버에서 진행하세요.",
           "askClaudeAccountPerProjectTitle": "프로젝트마다 사용할 Claude 계정 묻기",
           "askClaudeAccountPerProjectDescription": "켜면 저장된 Claude 계정이 없는 프로젝트에서 Claude를 시작하기 전에 묻습니다.",
           "accountScopePrefix": "계정 범위",

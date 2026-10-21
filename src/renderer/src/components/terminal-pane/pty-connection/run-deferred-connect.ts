@@ -28,6 +28,7 @@ import { bindDeferredColdRestoreAndSnapshot } from './deferred-cold-restore-and-
 import { bindHiddenOutputSeqAndSkip } from './hidden-output-seq-and-skip'
 import { bindHiddenRestoreState } from './hidden-restore-state'
 import { bindParkRevealSnapshotVerdictActions } from './park-reveal-snapshot-verdict'
+import { bindRemoteProgramRedraw } from './remote-program-redraw'
 
 export function installRunDeferredConnect(session: ConnectPanePtySession): void {
   const cwdPromise = session.deps.cwdPromise
@@ -220,6 +221,7 @@ export function installRunDeferredConnect(session: ConnectPanePtySession): void 
       )
     }
 
+    bindRemoteProgramRedraw(session)
     bindSerializeHiddenOutputSnapshot(session)
     bindForegroundOutputRefresh(session)
     bindHiddenOutputSeqAndSkip(session)

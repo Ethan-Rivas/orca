@@ -6849,7 +6849,6 @@
           "9fec52de4b": "如何复制 Cookie",
           "remoteServerFallback": "远程服务器",
           "loadAccountsFailed": "无法加载提供商账户。",
-          "remoteScopeAccounts": "正在显示由 {{value0}} 管理的账户。请在该服务器上添加或重新验证账户。",
           "askClaudeAccountPerProjectTitle": "为每个项目询问要使用的 Claude 账户",
           "askClaudeAccountPerProjectDescription": "开启后，没有保存 Claude 账户的项目会在启动 Claude 前询问。",
           "accountScopePrefix": "账户范围",

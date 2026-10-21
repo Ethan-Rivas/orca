@@ -6855,7 +6855,6 @@
           "4e32e030b2": "ローカルに保存されます。Orca は使用量の更新のために platform.minimax.io のみに送信します。",
           "remoteServerFallback": "リモートサーバー",
           "loadAccountsFailed": "プロバイダーアカウントを読み込めませんでした。",
-          "remoteScopeAccounts": "{{value0}} が管理するアカウントを表示しています。アカウントの追加や再認証はそのサーバー上で行ってください。",
           "askClaudeAccountPerProjectTitle": "プロジェクトごとに使用する Claude アカウントを確認する",
           "askClaudeAccountPerProjectDescription": "オンにすると、Claude アカウントが保存されていないプロジェクトでは、Claude を開始する前に確認します。",
           "accountScopePrefix": "アカウントスコープ",
