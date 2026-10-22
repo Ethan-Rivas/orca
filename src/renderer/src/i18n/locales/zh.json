@@ -14533,7 +14533,7 @@
             "databaseCount_one": "{{value0}} 个数据库",
             "databaseCount_other": "{{value0}} 个数据库",
             "scanning": "正在扫描 {{value0}}",
-            "reading": "正在读取 {{value0}} 个文件",
+            "checking": "正在检查 {{value0}}",
             "scanned": "已扫描 {{value0}}"
           }
         }
@@ -20009,8 +20009,12 @@
       "status": "PR #{{number}} 未链接"
     },
     "discard": {
+      "deleteUntrackedFileDescription": "这将永久删除此未跟踪文件。此操作无法撤销。",
+      "deleteUntrackedFilesDescription": "这将永久删除这 {{count}} 个未跟踪文件。此操作无法撤销。",
       "restoreStagedVersionDescription": "这将恢复最后一个暂存版本并放弃删除。此操作无法撤消。",
-      "unstagedChangesDescription": "这将恢复对此文件的未暂存更改。此操作无法撤消。"
+      "unstagedChangesDescription": "这将恢复对此文件的未暂存更改。此操作无法撤消。",
+      "unstagedSelectionIncludingUntrackedDescription": "这将还原未暂存的更改，并永久删除此选择中的任何未跟踪文件。此操作无法撤销。",
+      "unstagedFilesIncludingUntrackedDescription": "这将还原未暂存的更改，并永久删除这 {{count}} 个文件中的任何未跟踪文件。此操作无法撤销。"
     }
   },
   "rendererRecovery": {

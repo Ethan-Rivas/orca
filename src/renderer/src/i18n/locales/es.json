@@ -14528,7 +14528,7 @@
             "databaseCount_one": "{{value0}} base de datos",
             "databaseCount_other": "{{value0}} bases de datos",
             "scanning": "Analizando {{value0}}",
-            "reading": "Leyendo {{value0}} archivos",
+            "checking": "Comprobando {{value0}}",
             "scanned": "Analizados {{value0}}"
           }
         }
@@ -20347,8 +20347,12 @@
   },
   "sourceControl": {
     "discard": {
+      "deleteUntrackedFileDescription": "Esto eliminará permanentemente este archivo sin seguimiento. No se puede deshacer.",
+      "deleteUntrackedFilesDescription": "Esto eliminará permanentemente estos {{count}} archivos sin seguimiento. No se puede deshacer.",
       "restoreStagedVersionDescription": "Esto restaurará la última versión preparada y descartará la eliminación. No se puede deshacer.",
-      "unstagedChangesDescription": "Esto revertirá los cambios no preparados de este archivo. No se puede deshacer."
+      "unstagedChangesDescription": "Esto revertirá los cambios no preparados de este archivo. No se puede deshacer.",
+      "unstagedSelectionIncludingUntrackedDescription": "Esto revertirá los cambios no preparados y eliminará permanentemente cualquier archivo sin seguimiento de esta selección. No se puede deshacer.",
+      "unstagedFilesIncludingUntrackedDescription": "Esto revertirá los cambios no preparados y eliminará permanentemente cualquier archivo sin seguimiento entre estos {{count}} archivos. No se puede deshacer."
     },
     "unlinkedPr": {
       "status": "PR #{{number}} desvinculada"
