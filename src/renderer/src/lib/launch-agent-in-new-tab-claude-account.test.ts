@@ -66,7 +66,7 @@ vi.mock('@/lib/launch-agent-web-host-tab', () => ({
 vi.mock('@/lib/worktree-runtime-owner', () => ({
   getExecutionHostIdForWorktree: () => 'local',
   getRuntimeEnvironmentIdForWorktree: () => null,
-  runtimeEnvironmentIdWithLegacyFallbackUnlessTwin: () => null
+  runtimeEnvironmentIdOrLocalUnlessTwin: () => null
 }))
 
 vi.mock('@/components/tab-bar/reconcile-order', () => ({
