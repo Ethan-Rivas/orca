@@ -7,7 +7,7 @@ import type { ProjectRuntimeSessionSummary } from './repository-runtime-session-
 import type { RepositoryPaneRepoUpdate } from './RepositoryPane'
 import { RepositoryHostSetupsSection } from './RepositoryHostSetupsSection'
 import { RepositoryWindowsRuntimeSection } from './RepositoryWindowsRuntimeSection'
-import { RepositoryForkSyncSection } from './RepositoryForkSyncSection'
+import { RepositoryForkSyncSection } from './repository/identity/RepositoryForkSyncSection'
 import { RepositoryGitHubAccountSection } from './RepositoryGitHubAccountSection'
 import { RepositoryClaudeAccountSection } from './RepositoryClaudeAccountSection'
 import { RepositoryWorktreeDefaultsSection } from './RepositoryWorktreeDefaultsSection'

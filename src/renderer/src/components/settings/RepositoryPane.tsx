@@ -18,20 +18,19 @@ import { SearchableSetting } from './SearchableSetting'
 import { RepositoryRemoveProjectButton } from './RepositoryRemoveProjectButton'
 import type { SettingsProjectRemovalScope } from './settings-project-list'
 import { matchesSettingsSearch } from './settings-search'
-import { useAppStore } from '../../store'
+import { useAppStore } from '@/store/index'
 import { getRepositoryIconSectionId } from './repository-settings-targets'
-import { RepositoryIconPicker } from './RepositoryIconPicker'
+import { RepositoryIconPicker } from './repository/identity/RepositoryIconPicker'
 import { getRepositoryPaneSearchEntries } from './repository-search'
 import { RepoSettingsDraftInput } from './RepositorySettingsDraftInput'
 import { RepositoryProjectSettingsSections } from './RepositoryProjectSettingsSections'
 import { RepositoryClaudeAccountSection } from './RepositoryClaudeAccountSection'
 import { translate } from '@/i18n/i18n'
-import { matchesRepositoryIdentitySearch } from './repository-identity-search'
+import { matchesRepositoryIdentitySearch } from './repository/identity/repository-identity-search'
 import { RepositoryJiraProjectSection } from './RepositoryJiraProjectSection'
 import { getProjectRuntimeSessionSummary } from './repository-runtime-session-summary'
 import { getRepoOwnerWorktreeVisibilityDefaults } from '../../store/worktree-visibility-defaults-by-host'
 export { getRepositoryPaneSearchEntries }
-export { matchesRepositoryIdentitySearch } from './repository-identity-search'
 
 export type RepositoryPaneRepoUpdate = Omit<
   Partial<Repo>,
