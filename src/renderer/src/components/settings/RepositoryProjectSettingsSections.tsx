@@ -10,7 +10,7 @@ import { RepositoryWindowsRuntimeSection } from './RepositoryWindowsRuntimeSecti
 import { RepositoryForkSyncSection } from './repository/identity/RepositoryForkSyncSection'
 import { RepositoryGitHubAccountSection } from './RepositoryGitHubAccountSection'
 import { RepositoryClaudeAccountSection } from './RepositoryClaudeAccountSection'
-import { RepositoryWorktreeDefaultsSection } from './RepositoryWorktreeDefaultsSection'
+import { RepositoryWorktreeDefaultsSection } from './repository/execution/RepositoryWorktreeDefaultsSection'
 
 type RepositoryProjectSettingsSectionsProps = {
   repo: Repo
