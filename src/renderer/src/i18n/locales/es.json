@@ -16635,16 +16635,16 @@
                 "addQuickCommand": "agregar comando rápido",
                 "newQuickCommand": "nuevo comando rápido",
                 "splitChatRight": "dividir chat a la derecha",
-                "moveChatRight": "mover chat a la derecha",
+                "newChatRight": "nuevo chat a la derecha",
                 "chatPaneRight": "panel de chat a la derecha",
                 "splitChatDown": "dividir chat abajo",
-                "moveChatDown": "mover chat abajo",
+                "newChatBelow": "nuevo chat abajo",
                 "chatPaneBelow": "panel de chat abajo"
               },
               "splitChatRight": "Dividir chat a la derecha",
-              "splitChatRightDescription": "Abre el chat activo en un panel dividido a la derecha.",
+              "splitChatRightDescription": "Abre un chat nuevo en un panel dividido a la derecha.",
               "splitChatDown": "Dividir chat abajo",
-              "splitChatDownDescription": "Abre el chat activo en un panel dividido abajo."
+              "splitChatDownDescription": "Abre un chat nuevo en un panel dividido abajo."
             }
           },
           "palette": {
@@ -18524,6 +18524,8 @@
         "settleEarlierMessage": "Espere a que se entregue su mensaje anterior o vuelva a intentarlo.",
         "queueTooLarge": "Hay demasiado texto esperando en la cola.",
         "shrinkQueue": "Elimine un mensaje de la cola o espere a que se entregue uno y vuelva a intentarlo.",
+        "messageTooLarge": "Supera el límite de 256 KB por mensaje.",
+        "shortenMessage": "Acórtelo o divídalo y vuelva a enviarlo.",
         "optionRejected": "El agente no aceptó este ajuste.",
         "goalsUnsupported": "Este agente no admite objetivos.",
         "agentRefused": "El agente lo rechazó.",
@@ -18566,6 +18568,10 @@
         "uploadingFile": "Subiendo {{name}}…",
         "removeAttachment": "Quitar archivo adjunto",
         "pastedImageLabel": "Imagen pegada",
+        "pastedTextLabel": "Texto pegado",
+        "pasteNotSavedLabel": "Pegado no guardado",
+        "pasteNotSaved": "Este pegado no se guardó. Vuelve a pegarlo o quítalo.",
+        "pastedTextTooLarge": "Este pegado haría que su mensaje superara el límite de 256 KB por mensaje. Acórtelo y vuelva a pegarlo.",
         "copyImage": "Copiar imagen",
         "copyImageFailed": "No se pudo copiar la imagen",
         "copyImageTooLarge": "La imagen es demasiado grande para copiarla.",
