@@ -141,8 +141,8 @@ export abstract class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends O
       agentArgs:
         request.agentArgs !== undefined
           ? request.agentArgs
-          : resolveTuiAgentLaunchArgs(request.agent, settings.agentDefaultArgs),
-      agentEnv: resolveTuiAgentLaunchEnv(request.agent, settings.agentDefaultEnv),
+          : resolveTuiAgentLaunchArgs(request.agent, settings),
+      agentEnv: resolveTuiAgentLaunchEnv(request.agent, settings),
       ompResumeFilePath: request.ompResumeFilePath,
       claudeAccountId: request.agent === 'claude' ? request.claudeAccountId : undefined,
       sessionOptions: this.toAgentSessionOptions(request.launchPreferences),
