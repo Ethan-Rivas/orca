@@ -4,7 +4,7 @@ import { normalizeRepoBadgeColor } from '../repo-badge-color'
 import { sanitizeRepoIcon } from '../repo-icon'
 import { normalizeGhAccountBinding } from '../github/account-binding'
 import { normalizeRepoAgentAccounts } from '../claude/project-claude-account-preference'
-import { normalizeJiraProjectReference } from '../jira-project-reference'
+import { normalizeJiraProjectReference } from '../jira/jira-project-reference'
 import {
   normalizeCustomWorktreeVisibilitySources,
   normalizeWorktreeVisibilitySourcePreferences
