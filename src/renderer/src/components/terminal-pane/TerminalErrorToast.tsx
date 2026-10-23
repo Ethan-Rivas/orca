@@ -12,6 +12,7 @@ import {
   stripClientEnvironmentFooter
 } from '../../../../shared/client-environment-info'
 import { describeClaudePinnedLaunchError } from './claude-pinned-launch-error-copy'
+import { StartOnActiveAccountButton } from './StartOnActiveAccountButton'
 import {
   localizeTerminalSpawnHints,
   withoutTerminalSpawnIssueRequest
@@ -254,10 +255,6 @@ export function TerminalErrorToast({
   // Why: the client's OS and shell describe neither the host nor its shell, and the renderer knows neither.
   const showClientEnvironment = paneOnClient && !ssh
   const paneOwnerUnverified = isPaneOwnerRecoveryError(error)
-  const pinnedLaunch = describeClaudePinnedLaunchError(error)
-  const showStartOnActiveAccount = Boolean(
-    pinnedLaunch?.offerActiveAccount && onStartOnActiveAccount
-  )
   const showDaemonRestart = !ssh && onRestartDaemon && shouldOfferDaemonRestart(error)
   // Restart cannot recover a session after its owning daemon exits.
   const showIssueLink =
@@ -416,14 +413,7 @@ export function TerminalErrorToast({
               : translate('auto.components.terminal.pane.TerminalErrorToast.retry', 'Retry')}
           </Button>
         ) : null}
-        {showStartOnActiveAccount ? (
-          <Button variant="outline" size="xs" onClick={onStartOnActiveAccount} className="ml-3">
-            {translate(
-              'auto.components.terminal.pane.TerminalErrorToast.startOnActiveAccount',
-              'Start on active account'
-            )}
-          </Button>
-        ) : null}
+        <StartOnActiveAccountButton error={error} onClick={onStartOnActiveAccount} />
         {/* Why: an owner can stay unverifiable, so Retry alone can loop forever. */}
         {paneOwnerUnverified && onOpenNewTerminal ? (
           <Button variant="outline" size="xs" onClick={onOpenNewTerminal} className="ml-2">
