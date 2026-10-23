@@ -16,13 +16,11 @@ export function harness(options: {
   deliveredMessageId?: string | null
   terminalPromptDelivered?: boolean
   repos?: { id: string; agentAccounts?: unknown }[]
-  /** Whether the surface reports that its typed line took the offered prompt. */
   lineCarriesPrompt?: boolean
   worktreeCreateError?: Error
   onStructuredCreate?: () => void
   onStructuredPromptDelivery?: () => void
   onSurfacePublished?: AgentLaunchExecution['onSurfacePublished']
-  /** A worktree-only factory, as orchestration workers and `worktree.create` pass. */
   worktreeOnlyFactory?: boolean
 }) {
   const calls: string[] = []

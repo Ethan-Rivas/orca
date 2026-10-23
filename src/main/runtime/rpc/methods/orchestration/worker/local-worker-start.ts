@@ -33,8 +33,7 @@ import { recordCreatedWorkerTerminalCustody } from './created-worker-terminal-cu
 import { tearDownFailedWorkerStart } from './failed-worker-start-teardown'
 import { releaseRetriedWorkerTerminal } from './retried-worker-terminal-release'
 import { requireWorkerAuthority, type WorkerEffect } from './worker-topology'
-import { prepareLocalWorkerStart } from './worker-start-validation'
-import { assertClaudeAccountWorktreeIsLocal } from './worker-claude-account-placement'
+import { assertLocalAccountWorktree, prepareLocalWorkerStart } from './worker-start-validation'
 import { deliverAndSettleWorkerStartReadiness } from './worker-start-readiness-settlement'
 import type { WorkerStartMutation } from './worker-start-mutation'
 
@@ -126,7 +125,7 @@ export async function startLocalWorker(args: {
       resolvedWorktreeId: resolvedWorktree?.id
     })
   }
-  await assertClaudeAccountWorktreeIsLocal(runtime, claudeAccount && resolvedWorktree?.id)
+  await assertLocalAccountWorktree(runtime, claudeAccount && resolvedWorktree?.id)
   const hostMode = resolveWorkerStartModeOnHost(runtime, args.mode, resolvedWorktree?.id, agent)
   let mode = chatWorkerMode(await hostMode, chat)
 

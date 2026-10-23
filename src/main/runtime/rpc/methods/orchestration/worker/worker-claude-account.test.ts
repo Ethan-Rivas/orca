@@ -4,7 +4,7 @@ import { WorkerStartParams } from '../../../../../../shared/rpc-contract/orchest
 import { createWorkerLaunchReceipt, withWorkerLaunchAccount } from './worker-launch-preferences'
 import { prepareLocalWorkerStart } from './worker-start-validation'
 import { decideWorkerStartMode } from '../../orchestration-worker-start-mode'
-import { assertClaudeAccountWorktreeIsLocal } from './worker-claude-account-placement'
+import { assertLocalAccountWorktree } from './worker-start-validation'
 import { decideAgentLaunchMode } from '../../../../../agent-launch/agent-launch-mode'
 
 function account(id: string, email: string): ClaudeManagedAccountSummary {
@@ -123,13 +123,13 @@ describe('worker-start --account', () => {
 
   it('refuses an SSH workspace placement', async () => {
     await expect(
-      assertClaudeAccountWorktreeIsLocal(
+      assertLocalAccountWorktree(
         { showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: 'ssh-1' })) },
         'wt-1'
       )
     ).rejects.toThrow(/SSH workspace/)
     await expect(
-      assertClaudeAccountWorktreeIsLocal(
+      assertLocalAccountWorktree(
         { showTerminalWorkspaceLaunchScope: vi.fn(async () => ({ connectionId: null })) },
         'wt-1'
       )
