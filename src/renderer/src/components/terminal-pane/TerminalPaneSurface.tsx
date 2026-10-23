@@ -38,6 +38,7 @@ export function TerminalPaneSurface({
   controller: TerminalPaneController
 }): React.JSX.Element {
   const {
+    activeAgentId,
     activePane,
     activePaneCanContinueInNewSession,
     activePaneCanResumeInChat,
@@ -190,6 +191,7 @@ export function TerminalPaneSurface({
       <TerminalPaneCodexRestartPortals controller={controller} />
       <AgentLaunchPaneNoticePortal
         refusal={visibleLaunchRefusal}
+        agentId={activeAgentId}
         isActive={isActive}
         pane={activePane}
         tabId={tabId}
@@ -200,6 +202,7 @@ export function TerminalPaneSurface({
         ? createPortal(
             <TerminalErrorToast
               error={visibleTerminalError}
+              agentId={activeAgentId}
               paneOnClient={paneOnClient}
               onDismiss={dismissTerminalError}
               onRestartDaemon={() => daemonActions.setPending('restart')}
