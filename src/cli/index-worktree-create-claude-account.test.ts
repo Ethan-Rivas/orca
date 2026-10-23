@@ -60,8 +60,8 @@ describe('orca worktree create --account', () => {
   it('sends the account selector to a host that advertises support', async () => {
     queueFixtures(
       callMock,
-      okFixture('req_status', { capabilities: [CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY] }),
       worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')]),
+      okFixture('req_status', { capabilities: [CLAUDE_LAUNCH_ACCOUNT_RUNTIME_CAPABILITY] }),
       okFixture('req_create', {
         worktree: buildWorktree('/tmp/repo/pinned', 'pinned', 'abc', 'repo-1')
       })
@@ -70,7 +70,7 @@ describe('orca worktree create --account', () => {
 
     await main([...createArgs, '--agent', 'claude', '--account', 'pinned@example.com'], '/tmp/repo')
 
-    expect(callMock).toHaveBeenNthCalledWith(1, 'status.get')
+    expect(callMock).toHaveBeenNthCalledWith(2, 'status.get')
     expect(callMock).toHaveBeenNthCalledWith(
       3,
       'worktree.create',
@@ -83,7 +83,11 @@ describe('orca worktree create --account', () => {
   })
 
   it('refuses an older host instead of launching on its active account', async () => {
-    queueFixtures(callMock, okFixture('req_status', { capabilities: [] }))
+    queueFixtures(
+      callMock,
+      worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')]),
+      okFixture('req_status', { capabilities: [] })
+    )
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await main([...createArgs, '--agent', 'claude', '--account', 'acct-b'], '/tmp/repo')
@@ -93,11 +97,19 @@ describe('orca worktree create --account', () => {
   })
 
   it('requires --agent claude', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    queueFixtures(
+      callMock,
+      worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')])
+    )
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await main([...createArgs, '--agent', 'codex', '--account', 'acct-b'], '/tmp/repo')
 
     expect(process.exitCode).toBe(1)
-    expect(callMock).not.toHaveBeenCalled()
+    expect([...log.mock.calls, ...error.mock.calls].flat().join('\n')).toContain(
+      '--account requires --agent claude'
+    )
+    expect(callMock).not.toHaveBeenCalledWith('worktree.create', expect.anything())
   })
 })

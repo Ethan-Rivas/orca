@@ -2,9 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ClaudeManagedAccountSummary } from '../../../../../../shared/managed-account-types'
 import { WorkerStartParams } from '../../../../../../shared/rpc-contract/orchestration-worker-start-params'
 import { createWorkerLaunchReceipt, withWorkerLaunchAccount } from './worker-launch-preferences'
-import { prepareLocalWorkerStart } from './worker-start-validation'
+import { assertLocalAccountWorktree, prepareLocalWorkerStart } from './worker-start-validation'
 import { decideWorkerStartMode } from '../../orchestration-worker-start-mode'
-import { assertLocalAccountWorktree } from './worker-start-validation'
 import { decideAgentLaunchMode } from '../../../../../agent-launch/agent-launch-mode'
 
 function account(id: string, email: string): ClaudeManagedAccountSummary {

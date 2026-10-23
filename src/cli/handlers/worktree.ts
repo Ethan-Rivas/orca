@@ -31,7 +31,6 @@ import type { TuiAgent } from '../../shared/tui-agent'
 import { parseCliAgent, readCliAgentLaunch } from '../agent-launch-request'
 import { createWorktreeWithAgent } from './worktree-create-agent-launch'
 import { printLineageSummary } from './worktree-lineage-summary'
-import { readClaudeLaunchAccountFlag } from './claude-launch-account-flag'
 import { projectWorktreePsTerminalVerdict } from '../worktree-ps-terminal-verdict'
 import {
   assertWorkspaceTargetFlagsCompatible,
@@ -73,8 +72,8 @@ function getPresentStringFlag(
 function getOptionalStartupAgent(flags: Map<string, string | boolean>): TuiAgent | undefined {
   const agent = getPresentStringFlag(flags, 'agent')
   if (agent === undefined) {
-    const needsAgent = ['prompt', 'model', 'effort', 'surface', 'retry-launch'].find((name) =>
-      flags.has(name)
+    const needsAgent = ['prompt', 'model', 'effort', 'surface', 'retry-launch', 'account'].find(
+      (name) => flags.has(name)
     )
     if (needsAgent) {
       throw new RuntimeClientError('invalid_argument', `--${needsAgent} requires --agent`)
@@ -153,11 +152,10 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
     const explicitParentWorktree = explicitParent.parentWorktree
     const explicitParentWorkspace = explicitParent.parentWorkspace
     const startupAgent = getOptionalStartupAgent(flags)
-    // Read before any request, so a bad prompt, model, effort or account creates nothing.
+    // Read before any request, so a bad prompt, model or effort creates nothing.
     const agentLaunch = startupAgent
       ? readCliAgentLaunch(flags, startupAgent, { createsWorktree: true })
       : undefined
-    const claudeAccount = await readClaudeLaunchAccountFlag(flags, client, startupAgent)
     const setupDecision = getOptionalSetupDecision(flags)
     const noParent = flags.get('no-parent') === true
     const envParentWorkspace =
@@ -214,15 +212,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       cliProvenanceRequest: callerTerminalHandle ? { callerTerminalHandle } : {}
     }
     if (agentLaunch) {
-      await createWorktreeWithAgent({
-        client,
-        flags,
-        create,
-        launch: agentLaunch,
-        claudeAccount,
-        json,
-        rawArgs
-      })
+      await createWorktreeWithAgent({ client, flags, create, launch: agentLaunch, json, rawArgs })
       return
     }
     const result = await withSetupDecisionRecovery(

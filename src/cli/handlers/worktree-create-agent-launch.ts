@@ -20,6 +20,7 @@ import { printLineageSummary } from './worktree-lineage-summary'
 import { printHookWarning } from './worktree-removal-warnings'
 import { withSetupDecisionRecovery } from './worktree-setup-decision-recovery'
 import { withCliAgentLaunchRecovery } from '../agent-launch-recovery'
+import { readClaudeLaunchAccountFlag } from './claude-launch-account-flag'
 
 type WorktreeAgentLaunchResult = Pick<
   RuntimeWorktreeCreateResult,
@@ -35,12 +36,12 @@ export async function createWorktreeWithAgent(args: {
   flags: Map<string, string | boolean>
   create: Record<string, unknown>
   launch: CliAgentLaunch
-  /** `--account`: only the create's startup terminal can run Claude on a non-active account. */
-  claudeAccount?: string
   json: boolean
   rawArgs?: readonly string[]
 }): Promise<void> {
-  const { client, flags, create, launch, claudeAccount, json, rawArgs } = args
+  const { client, flags, create, launch, json, rawArgs } = args
+  // Why: only the create's startup terminal can run Claude on a non-active account.
+  const claudeAccount = await readClaudeLaunchAccountFlag(flags, client, launch.agent)
   if (claudeAccount && (launch.operationId || launch.surface || hasLaunchModelFlags(flags))) {
     throw new RuntimeClientError(
       'invalid_argument',
