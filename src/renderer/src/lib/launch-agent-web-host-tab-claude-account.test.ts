@@ -57,7 +57,7 @@ it('carries the Claude account to the host even without a prompt', async () => {
   await launch()
   expect(mockCreateTerminal).toHaveBeenCalledWith(
     expect.objectContaining({
-      agent: 'claude',
+      launchAgent: 'claude',
       launchConfig: expect.objectContaining({ claudeAccountId: 'acct-2' })
     })
   )
