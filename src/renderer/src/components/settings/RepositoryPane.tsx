@@ -9,7 +9,7 @@ import { getRepoExecutionHostId, type ExecutionHostId } from '../../../../shared
 import { Label } from '../ui/label'
 import { Separator } from '../ui/separator'
 import { useShallow } from 'zustand/react/shallow'
-import { RepositoryHooksSection } from './RepositoryHooksSection'
+import { RepositoryHooksSection } from './repository/execution/RepositoryHooksSection'
 import { McpConfigSection } from './McpConfigSection'
 import { WorktreeSymlinksSection } from './WorktreeSymlinksSection'
 import { SparsePresetSettingsSection } from './SparsePresetSettingsSection'
@@ -28,7 +28,7 @@ import { RepositoryClaudeAccountSection } from './RepositoryClaudeAccountSection
 import { translate } from '@/i18n/i18n'
 import { matchesRepositoryIdentitySearch } from './repository/identity/repository-identity-search'
 import { RepositoryJiraProjectSection } from './repository/RepositoryJiraProjectSection'
-import { getProjectRuntimeSessionSummary } from './repository-runtime-session-summary'
+import { getProjectRuntimeSessionSummary } from './repository/execution/repository-runtime-session-summary'
 import { getRepoOwnerWorktreeVisibilityDefaults } from '../../store/worktree-visibility-defaults-by-host'
 export { getRepositoryPaneSearchEntries }
 
