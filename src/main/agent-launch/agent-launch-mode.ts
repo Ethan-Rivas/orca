@@ -25,10 +25,9 @@ import {
 import type { AgentLaunchSurface } from '../../shared/agent-launch-surface'
 import { formatAgentTypeLabel } from '../../shared/agent-type-label'
 import { AgentLaunchSurfaceUnavailableError } from './agent-launch-surface-refusal'
+import { DOWNGRADE_DETAIL, type AgentLaunchDowngradeReason } from './agent-launch-downgrade-detail'
 
 export type { AgentLaunchMode, AgentLaunchModeReason, AgentLaunchModeReceipt }
-
-type AgentLaunchDowngradeReason = Exclude<AgentLaunchModeReason, 'user_default' | 'requested'>
 
 /** Caller-specific receipt wording, shared across desktop, mobile and orchestration. */
 export type AgentLaunchModeVocabulary = {
@@ -66,20 +65,6 @@ const REGISTERED_STRUCTURED_AGENTS: readonly string[] = STRUCTURED_AGENT_RUNTIME
   ({ definition }) => definition.agent
 )
 
-const DOWNGRADE_DETAIL: Record<AgentLaunchDowngradeReason, string> = {
-  remote_execution_host: 'this launch runs on a remote execution host',
-  reused_terminal: 'it reuses a running terminal agent',
-  agent_without_structured_session: 'this agent has no structured session',
-  tui_launch_command: 'it asks to start in a folder other than its workspace',
-  structured_sessions_unavailable: 'this runtime does not support structured agent sessions',
-  structured_support_unknown: 'the execution host has not established structured session support',
-  wsl_execution_runtime: 'this workspace runs under WSL',
-  codex_on_windows: 'Codex has no structured session on Windows',
-  structured_unsupported_on_host: 'the execution host cannot create one here',
-  pinned_claude_account:
-    '--account runs Claude on a non-active account, which only a terminal can do'
-}
-
 const BLOCKER_REASON: Record<StructuredNativeChatBlocker, AgentLaunchDowngradeReason> = {
   'reused-terminal': 'reused_terminal',
   'agent-without-structured-session': 'agent_without_structured_session',
@@ -91,10 +76,14 @@ const BLOCKER_REASON: Record<StructuredNativeChatBlocker, AgentLaunchDowngradeRe
   'client-capability': 'structured_sessions_unavailable'
 }
 
-const HOST_SUPPORT_REASON: Record<'agent' | 'remote' | 'wsl', AgentLaunchDowngradeReason> = {
+type HostSupportReason = 'agent' | 'remote' | 'wsl' | 'chat-program'
+type HostLaunchSupport = { supported: boolean; reason?: HostSupportReason }
+
+const HOST_SUPPORT_REASON: Record<HostSupportReason, AgentLaunchDowngradeReason> = {
   agent: 'structured_unsupported_on_host',
   remote: 'remote_execution_host',
-  wsl: 'wsl_execution_runtime'
+  wsl: 'wsl_execution_runtime',
+  'chat-program': 'chat_runtime_not_installed'
 }
 
 /** Apply shared feasibility policy to facts available before resolving the workspace. */
@@ -216,12 +205,15 @@ async function readStructuredCreateSupport(
   runtime: Pick<OrcaRuntimeService, 'getStructuredAgentSessionCreateSupport'>,
   worktreeId: string,
   agent: TuiAgent | undefined
-): Promise<{ supported: boolean; reason?: 'agent' | 'remote' | 'wsl' } | null> {
+): Promise<HostLaunchSupport | null> {
   if (!agent || !REGISTERED_STRUCTURED_AGENTS.includes(agent)) {
     return { supported: false, reason: 'agent' }
   }
   try {
-    return await runtime.getStructuredAgentSessionCreateSupport(`id:${worktreeId}`, agent)
+    // These launches have no chat tab to offer the install, so they keep the agent's own CLI.
+    return await runtime.getStructuredAgentSessionCreateSupport(`id:${worktreeId}`, agent, {
+      requireInstalledChatProgram: true
+    })
   } catch {
     return null
   }
@@ -229,7 +221,7 @@ async function readStructuredCreateSupport(
 
 export function downgradeAgentLaunchModeForHost(
   receipt: AgentLaunchModeReceipt,
-  support: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' } | null,
+  support: HostLaunchSupport | null,
   vocabulary: AgentLaunchModeVocabulary = DEFAULT_LAUNCH_VOCABULARY,
   context?: AgentLaunchModeSettlement
 ): AgentLaunchModeReceipt {
