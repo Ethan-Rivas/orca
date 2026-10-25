@@ -8,6 +8,7 @@ import type { PtySpawnPaneBinding } from '../spawn-commit-binding'
 import { spawnCommitBindingOrigin } from '../../../persistence/loading-store/pty-binding-span'
 import { commitPtyWithOpenCodePromptIntent } from '../../../opencode/opencode-startup-prompt-owner'
 import { markRuntimeClaudePtySpawned } from './spawn-claude-account'
+import { resumeSpawnRefusal } from '../host-env/saved-resume-admission'
 
 export async function commitRuntimePtySpawn(ctx: RuntimePtySpawnState) {
   return commitPtyWithOpenCodePromptIntent(ctx, () => {
@@ -16,7 +17,8 @@ export async function commitRuntimePtySpawn(ctx: RuntimePtySpawnState) {
     // Fallback may follow an access error; only proven absence authorizes changing the saved folder.
     const correctStartupCwd = startupCwdFallback ? ctx.correctStartupCwd : undefined
     const ensure = ctx.result.agentSessionEnsure
-    if (ctx.isClaudeLaunch && !ctx.stablePaneOwner) {
+    // Why the refusal check: a refused resume starts a plain shell, not the pinned Claude.
+    if (ctx.isClaudeLaunch && !ctx.stablePaneOwner && !resumeSpawnRefusal(ctx.resumeAdmission)) {
       markRuntimeClaudePtySpawned(ctx.result.id, ctx.claudeAuth)
     }
     return commitPtySpawn({
