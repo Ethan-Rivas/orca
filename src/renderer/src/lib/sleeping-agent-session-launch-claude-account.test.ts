@@ -25,6 +25,7 @@ const store = {
   openFiles: [],
   browserTabsByWorktree: {},
   tabBarOrderByWorktree: {},
+  agentStatusByPaneKey: {},
   createTab: mockCreateTab,
   claimAutomaticAgentResume: vi.fn(),
   clearSleepingAgentSession: vi.fn(),

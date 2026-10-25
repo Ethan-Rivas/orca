@@ -71,7 +71,7 @@ export const launchConfigClaudeAccountIdSchema = z
   .pipe(z.union([z.string(), z.undefined()]))
   .optional()
 
-const sleepingAgentLaunchConfigBaseSchema = z.object({
+export const sleepingAgentLaunchConfigBaseSchema = z.object({
   agentCommand: z.string().optional(),
   agentArgs: z.string(),
   agentEnv: sleepingAgentLaunchEnvSchema,

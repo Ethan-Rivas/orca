@@ -311,3 +311,10 @@ export function extractAgentProviderSession(
 
 // Preserve the existing import path.
 export { getAgentForkArgv, getAgentResumeArgv } from './agent-resume-argv'
+
+export {
+  terminalLaunchFacts,
+  type SavedResumeDecision,
+  type SavedResumeStartupSource,
+  type TerminalLaunchResult
+} from './terminal-launch-result'

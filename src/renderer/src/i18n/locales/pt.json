@@ -19703,7 +19703,6 @@
         "notDoneAnswer": "Sua resposta não foi enviada.",
         "notDoneOption": "A configuração não foi alterada.",
         "notDoneCommand": "O comando não foi executado.",
-        "notDoneGoal": "O objetivo não foi alterado.",
         "notDoneQueuedEdit": "Sua edição não foi salva.",
         "restartFailed": "Não foi possível reiniciar o agente.",
         "capacity": "O Orca no computador que executa este chat atingiu um limite de requisições. Atualize o Orca lá e tente novamente.",
@@ -19779,8 +19778,8 @@
       },
       "transcriptLabel": "Conversa",
       "resumeInNewChat": {
-        "exitUnconfirmedFromTerminal": "O Orca não consegue confirmar se o {{agent}} foi encerrado no terminal. Pare o que estiver em execução lá ou feche o terminal e abra esta conversa no Histórico de sessões.",
-        "exitUnconfirmed": "O Orca não consegue confirmar se o {{agent}} foi encerrado no terminal. Pare o que estiver em execução lá ou feche o terminal e tente novamente.",
+        "exitUnconfirmedFromTerminal": "{{agent}} já está executando esta conversa em outro terminal. Encerre o {{agent}} lá ou feche esse terminal e abra esta conversa no Histórico de sessões.",
+        "exitUnconfirmed": "{{agent}} já está executando esta conversa em outro terminal. Encerre o {{agent}} lá ou feche esse terminal e abra esta conversa no Histórico de sessões.",
         "notSavedYet": "O {{agent}} ainda não salvou esta conversa. Tente novamente depois que ele responder.",
         "cannotResume": "Esta conversa do {{agent}} não pode ser retomada em um chat nativo."
       },
