@@ -57,8 +57,7 @@ export const WorkerStartParams = z
         message: '--account applies to a new Claude terminal and cannot combine with --terminal.'
       })
     }
-    // Why: --spec creates a new Task, so a retry link to a prior Dispatch could never resolve and
-    // the refusal named a Task id the caller never supplied.
+    // spec creates a new Task, so retryOf cannot refer to a prior Dispatch for it.
     if (params.retryOf && params.spec) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -7,7 +7,7 @@ import type { RuntimeTerminalPresentation } from '../../shared/runtime-types'
 const NO_WORKSPACE_OR_WINDOW_MESSAGE =
   'No workspace was given or found for this terminal, and this Orca host has no open app window to create one in. Pass --worktree to choose a workspace. No terminal was created.'
 
-// A create with no workspace lands in whatever the window is showing, so only the window can make it.
+// Workspace-less creates target the window's current view, so only it can perform them.
 export async function createDesktopTerminal(
   runtime: OrcaRuntimeWithCreateTerminal,
   opts: dependencies.TerminalCreateOptions,
@@ -17,7 +17,7 @@ export async function createDesktopTerminal(
     // Why: only the background lane reaches the PTY spawn that honours the pinned account.
     throw new Error('A Claude --account launch requires a workspace selector.')
   }
-  // A worktree-less create has no execution host to resolve the shell on.
+  // Without a workspace there is no host on which to resolve a shell.
   if (opts.shellOverride) {
     throw new Error(
       `--shell ${opts.shellOverride} needs a workspace, because the shell is resolved on the workspace's execution host. No terminal was created.`
