@@ -61,7 +61,8 @@ export function launchSleepingAgentSession(
       ? { claudeAccountId: launchConfig?.claudeAccountId ?? record.claudeAccountId }
       : {}),
     platform: resumeTarget.platform,
-    shell: resumeTarget.shell
+    shell: resumeTarget.shell,
+    launchCwd: state.getKnownWorktreeById(record.worktreeId)?.path
   })
   if (!startupPlan) {
     toast.error(

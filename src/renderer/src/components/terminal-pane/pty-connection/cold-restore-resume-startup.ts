@@ -100,7 +100,8 @@ export function bindBuildColdRestoreAgentResumeStartup(session: ConnectPanePtySe
           }
         : {}),
       platform: resumeTarget.platform,
-      shell: resumeTarget.shell
+      shell: resumeTarget.shell,
+      launchCwd: session.worktree?.path
     })
     if (!startupPlan) {
       return null

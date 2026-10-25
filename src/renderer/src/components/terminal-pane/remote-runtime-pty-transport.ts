@@ -1,4 +1,5 @@
 import { readTerminalSpawnDeferral } from '../../../../shared/host-spawn-admission'
+import { agentProviderSessionForEnsure } from '../../../../shared/agent-session-resume'
 import { remoteRestoreSpawnIntentParams } from '../../runtime/remote-restore-spawn-intent'
 import { createAgentSessionLaunchOptions } from '@/runtime/agent-session-launch-options'
 import { createRemoteRuntimeDisconnectedInputGrace } from './remote-runtime-disconnected-input-grace'
@@ -3454,7 +3455,7 @@ export function createRemoteRuntimePtyTransport(
                     ...launchOptions,
                     worktree: toRuntimeTerminalWorktreeSelector(worktreeId),
                     agent: launchAgentToSend!,
-                    providerSession: resumeProviderSessionToSend,
+                    providerSession: agentProviderSessionForEnsure(resumeProviderSessionToSend),
                     ...(launchConfigToSend?.ompResumeFilePath
                       ? { ompResumeFilePath: launchConfigToSend.ompResumeFilePath }
                       : {}),

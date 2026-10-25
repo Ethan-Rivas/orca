@@ -45,7 +45,8 @@ export function installMainWindowAgentStatusListeners(options: MainWindowAgentSt
       authorityRestartId,
       structuredHost,
       programStatus,
-      programStatusOnly
+      programStatusOnly,
+      agentPresence
     }) => {
       if (state.mainWindow?.isDestroyed()) {
         return
@@ -101,6 +102,9 @@ export function installMainWindowAgentStatusListeners(options: MainWindowAgentSt
         ...(claudeAccountId ? { claudeAccountId } : {}),
         ...(programStatus ? { programStatus } : {}),
         ...(programStatusOnly === true ? { programStatusOnly: true } : {}),
+        ...(agentPresence?.session && !agentPresence.ended
+          ? { paneOwner: { agent: agentPresence.agent, session: agentPresence.session } }
+          : {}),
         // Mark reconnect replays so cached completions do not notify again.
         ...(isReplay === true ? { isReplay: true } : {})
       }
