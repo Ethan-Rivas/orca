@@ -71,6 +71,7 @@ export async function createExistingWorktreeWorkerTerminal(args: {
     // configured launcher instead of executing the raw id.
     startupAgent: args.agent,
     launchSource: 'orchestration',
+    suppressStartupUpdatePrompt: true,
     ...(args.launchPreferences ? { launchPreferences: args.launchPreferences } : {}),
     ...(args.claudeAccountId ? { claudeAccountId: args.claudeAccountId } : {}),
     title: `worker-${args.taskId}`,
