@@ -38,12 +38,14 @@ import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
 import { useAppStore } from '@/store'
 import { settleComposerSubmit } from '@/lib/composer-submit-cancellation'
 import { runBackgroundWorktreeCreation } from '@/lib/worktree-creation-flow'
+import type { ComposerCreateHandoff } from '@/lib/composer-create-handoff'
 import { translate } from '@/i18n/i18n'
 import { resolveQuickCreateLinkedWorkItemPrompt } from '@/lib/linked-work-item-context'
 import { buildQuickComposerStartup } from './quick-startup-plan'
 import { buildQuickCreationRequest, type QuickSubmitOptions } from './quick-creation-request'
 import type { PendingSmartGitHubSubmitResolution } from './source-selection-decisions'
 import { resolveAgentSessionLaunchRoute } from '@/lib/agent-session-launch-plan'
+import { launchChoiceSurface } from '@/lib/agent-menu-selection'
 import { findLaunchRepo, resolveLaunchClaudeAccountId } from '@/lib/claude-launch-account'
 import { chooseClaudeLaunchAccountIdForRepo } from '@/components/claude-account-prompt/choose-claude-launch-account'
 
@@ -86,7 +88,8 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       workspaceNameSeed: string,
       workspaceRunContext: WorktreeCreationRequest['workspaceRunContext'],
       repoId: string,
-      options?: QuickSubmitOptions
+      options?: QuickSubmitOptions,
+      handoff?: ComposerCreateHandoff
     ): Promise<void> => {
       const prepared = await prepareQuickSubmit(
         smartGitHubResolution,
@@ -202,12 +205,7 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
             claudeAccountId: composerClaudeAccountId,
             // Why: the menu's pick stands, except that a pinned Claude account still needs a terminal.
             ...(options?.launchChoice
-              ? {
-                  requestedSurface:
-                    options.launchChoice.route === 'structured-native-chat'
-                      ? ('chat' as const)
-                      : ('terminal' as const)
-                }
+              ? { requestedSurface: launchChoiceSurface(options.launchChoice) }
               : {})
           })
       const structuredLaunch = agentLaunchRoute === 'structured-native-chat'
@@ -272,7 +270,16 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
         clearNewWorkspaceDraft()
       }
 
-      runBackgroundWorktreeCreation(request)
+      if (handoff) {
+        handoff.start(request)
+      } else {
+        runBackgroundWorktreeCreation(request)
+      }
+
+      // The composer already closed at handoff; closing again could dismiss a newer modal.
+      if (handoff?.isHandedOff()) {
+        return
+      }
 
       if (createMultiple) {
         resetForNextCreate()
