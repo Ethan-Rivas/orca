@@ -116,6 +116,7 @@ export const SettingsUpdate = z
     experimentalConnectors: z.boolean().optional(),
     agentStatusHooksEnabled: z.boolean().optional(),
     askClaudeAccountPerProject: z.boolean().optional(),
+    claudeSubagentNavigationEnabled: z.boolean().optional(),
     defaultRepoSelection: z.array(z.string()).nullable().optional(),
     defaultLinearTeamSelection: z.array(z.string()).nullable().optional(),
     compactWorktreeCards: z.boolean().optional(),

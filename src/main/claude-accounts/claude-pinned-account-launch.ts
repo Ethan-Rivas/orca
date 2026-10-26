@@ -17,7 +17,7 @@ export async function prepareClaudePinnedAccountLaunch(
 ): Promise<ClaudeRuntimeAuthPreparation> {
   // Why wait only without the account's own login: whether System default covers it depends on the login shell's env.
   if (!router.accountLogin(accountId)) {
-    await router.envSettled()
+    await router.envReady
   }
   const pinned = {
     runtime: 'host' as const,

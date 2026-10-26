@@ -272,6 +272,7 @@ export function registerCoreHandlers(
     ensureStructuredSessionOwnership
   })
   registerAiVaultHandlers({
+    getUserDataPath: () => app.getPath('userData'),
     ensureStructuredSessionOwnership,
     getAdditionalCodexHomePaths: lifecycleOptions.getAdditionalAiVaultCodexHomePaths,
     prepareSessionResume: lifecycleOptions.prepareAiVaultSessionResume,
