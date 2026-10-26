@@ -8,9 +8,11 @@ import { getDefaultWslDistro, getWslHome } from '../wsl'
 import { ClaudeProfileRouter } from './claude-profile-router'
 import { ClaudeWslProfileRouter } from './claude-profile-wsl-router'
 import {
+  installClaudeObservedConfigDirs,
   installClaudeProfileRouter,
   installClaudeWslProfileRouter
 } from './claude-profile-installed-router'
+import { ClaudeObservedConfigDirs } from './claude-observed-config-dirs'
 import {
   getSelectedClaudeAccountIdForTarget,
   type ClaudeAccountSelectionTarget
@@ -43,6 +45,11 @@ export class ClaudeRuntimeAuthService {
     const args = { getSettings: () => store.getSettings(), dataRoot: this.dataRoot }
     this.router = new ClaudeProfileRouter(args)
     installClaudeProfileRouter(this.router)
+    installClaudeObservedConfigDirs(
+      new ClaudeObservedConfigDirs(join(this.dataRoot, 'claude-observed-config-dirs.json'), () =>
+        store.getSettings()
+      )
+    )
     this.wslRouter = process.platform === 'win32' ? new ClaudeWslProfileRouter(args) : undefined
     installClaudeWslProfileRouter(this.wslRouter)
     void this.publishAll().catch((error: unknown) => {

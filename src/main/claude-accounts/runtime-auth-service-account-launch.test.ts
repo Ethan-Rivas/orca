@@ -28,6 +28,7 @@ vi.mock('./claude-pinned-account-launch', () => ({
   prepareClaudePinnedAccountLaunch: fakes.prepareClaudePinnedAccountLaunch
 }))
 vi.mock('./claude-profile-installed-router', () => ({
+  installClaudeObservedConfigDirs: () => {},
   installClaudeProfileRouter: () => {},
   installClaudeWslProfileRouter: () => {}
 }))
