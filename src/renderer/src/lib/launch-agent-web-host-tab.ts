@@ -14,7 +14,10 @@ import type { AgentPromptDelivery } from '../../../shared/agent-session-host-aut
 import { translate } from '@/i18n/i18n'
 import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
 import type { AgentTerminalLaunchCompletion } from './structured-agent-session-launch-admission'
-import { toAgentLaunchPreferences } from '../../../shared/agent-launch-preferences'
+import {
+  agentPermissionNeedsPreparedCommand,
+  toAgentLaunchPreferences
+} from '../../../shared/agent-launch-preferences'
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../../shared/claude/project-claude-account-preference'
 import { describeClaudePinnedLaunchError } from '@/components/terminal-pane/claude-pinned-launch-error-copy'
 
@@ -86,7 +89,7 @@ export function launchAgentInWebHostTab(args: {
     relaunch
   } = args
   const hasPrompt = prompt.length > 0
-  const launchPreferences = toAgentLaunchPreferences(startupPlan.sessionOptions)
+  const launchPreferences = toAgentLaunchPreferences(startupPlan.sessionOptions, agent)
   const structuredPromptDelivery: AgentPromptDelivery =
     promptDelivery === 'draft' ? 'draft' : 'auto-submit'
   const launch = {
@@ -100,6 +103,7 @@ export function launchAgentInWebHostTab(args: {
     agentSessionKind: 'fresh',
     // Why: with or without a prompt, the desktop's launch settings decide args (#31986).
     launchAgent: agent,
+    preparedAgentCommand: agentPermissionNeedsPreparedCommand(agent, startupPlan.sessionOptions),
     command: startupPlan.launchCommand,
     ...(startupPlan.env ? { env: startupPlan.env } : {}),
     launchConfig: startupPlan.launchConfig,
@@ -110,7 +114,11 @@ export function launchAgentInWebHostTab(args: {
     ...(hasPrompt && pastePromptAfterReady === null
       ? { promptDelivery: structuredPromptDelivery }
       : {}),
-    ...(agentArgs !== undefined ? { agentArgs } : {}),
+    ...(launchPreferences?.mode
+      ? { agentArgs: startupPlan.launchConfig.agentArgs }
+      : agentArgs !== undefined
+        ? { agentArgs }
+        : {}),
     ...(launchPreferences ? { launchPreferences } : {})
   } as const
 
