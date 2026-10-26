@@ -3,11 +3,11 @@ import { executeAgentLaunch, type AgentLaunchExecution } from './agent-launch-ex
 import type { AgentLaunchSurfaceFactory } from './agent-launch-surface-factories'
 import type { AgentLaunchIntent } from '../../shared/agent-launch-intent'
 
-/** A stub host for the executor, recording each runtime and factory call it receives. */
 export const STRUCTURED_PREFERENCE = {
   experimentalNativeChat: true
 }
 
+/** A stub host for the executor, recording each runtime and factory call it receives. */
 export function harness(options: {
   settings?: Record<string, unknown> | null
   createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
