@@ -11,17 +11,17 @@ const CREATE_INTENT: AgentLaunchIntent = {
 }
 
 describe('a structured launch that creates its own worktree', () => {
-  it('keeps its live inventory through publication and clears it before prompt delivery', async () => {
+  it('keeps its live inventory through publication and clears it after launch', async () => {
     let duringCreate: unknown
-    let duringPrompt: unknown
+    let duringPublication: unknown
     const h = harness({
       onStructuredCreate: () => (duringCreate = readCreatedWorkspaceLaunch(h.runtime, 'wt-new')),
-      onStructuredPromptDelivery: () =>
-        (duringPrompt = readCreatedWorkspaceLaunch(h.runtime, 'wt-new'))
+      onSurfacePublished: () =>
+        (duringPublication = readCreatedWorkspaceLaunch(h.runtime, 'wt-new'))
     })
     await h.run({ ...CREATE_INTENT, prompt: { text: 'start', delivery: 'submit' } })
     expect(duringCreate).toMatchObject({ agent: 'claude', launchId: expect.any(String) })
-    expect(duringPrompt).toBeUndefined()
+    expect(duringPublication).toEqual(duringCreate)
     expect(readCreatedWorkspaceLaunch(h.runtime, 'wt-new')).toBeUndefined()
   })
 
@@ -309,20 +309,22 @@ describe('the prompt receipt', () => {
     expect(h.calls).toEqual([
       'createWorktree(startupAgent=undefined)',
       'createSupport',
-      'createStructuredSession',
-      'deliverStructuredPrompt'
+      'createStructuredSession'
     ])
-    expect(h.deliverStructuredPrompt).toHaveBeenCalledWith({
-      sessionId: 'sess-1',
-      fence: 4,
-      prompt: SUBMIT
-    })
+    expect(h.createStructuredSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstMessage: {
+          clientMessageId: expect.any(String),
+          body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: SUBMIT.text }] }
+        }
+      })
+    )
   })
 
-  it('under-claims as not delivered when nothing was committed', async () => {
+  it('keeps a missing commit receipt unconfirmed', async () => {
     const h = harness({ deliveredMessageId: null })
     const result = await h.run({ ...CREATE_INTENT, prompt: SUBMIT })
-    expect(result.prompt).toEqual({ delivery: 'submit', outcome: 'not-delivered' })
+    expect(result.prompt).toEqual({ delivery: 'submit', outcome: 'unconfirmed' })
   })
 
   it('leaves a draft with the caller, because the host has no composer to hold one', async () => {
@@ -332,7 +334,7 @@ describe('the prompt receipt', () => {
       prompt: { text: 'do the thing', delivery: 'draft' }
     })
     expect(result.prompt).toEqual({ delivery: 'draft', outcome: 'not-delivered' })
-    expect(h.deliverStructuredPrompt).not.toHaveBeenCalled()
+    expect(h.createStructuredSession.mock.calls[0]?.[0].firstMessage).toBeUndefined()
   })
 
   it('omits the receipt when no prompt was requested', async () => {
@@ -673,21 +675,13 @@ describe('the surface is published as the launch stands, before its prompt is de
     expect(launch.deliverTerminalPrompt).not.toHaveBeenCalled()
   })
 
-  it('records a chat before its first message is committed', async () => {
+  it('publishes a chat with its first message receipt', async () => {
     const { launch, published } = publishing({})
 
     const result = await launch.run(PROMPTED_EXISTING)
 
-    expect(launch.calls).toEqual([
-      'createSupport',
-      'createStructuredSession',
-      'published',
-      'deliverStructuredPrompt'
-    ])
-    expect(published[0]).toEqual({
-      ...result,
-      prompt: { delivery: 'submit', outcome: 'unconfirmed' }
-    })
+    expect(launch.calls).toEqual(['createSupport', 'createStructuredSession', 'published'])
+    expect(published[0]).toEqual(result)
     expect(result.prompt).toEqual({ delivery: 'submit', outcome: 'journaled', messageId: 'msg-1' })
   })
 })

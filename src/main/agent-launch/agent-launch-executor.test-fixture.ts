@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { executeAgentLaunch, type AgentLaunchExecution } from './agent-launch-executor'
+import type { AgentLaunchSurfaceFactory } from './agent-launch-surface-factories'
 import type { AgentLaunchIntent } from '../../shared/agent-launch-intent'
 
 /** A stub host for the executor, recording each runtime and factory call it receives. */
@@ -19,7 +20,6 @@ export function harness(options: {
   lineCarriesPrompt?: boolean
   worktreeCreateError?: Error
   onStructuredCreate?: () => void
-  onStructuredPromptDelivery?: () => void
   onSurfacePublished?: AgentLaunchExecution['onSurfacePublished']
   worktreeOnlyFactory?: boolean
 }) {
@@ -62,25 +62,29 @@ export function harness(options: {
     }
     return options.createSupport ?? { supported: true }
   })
-  const createStructuredSession = vi.fn(async () => {
-    calls.push('createStructuredSession')
-    options.onStructuredCreate?.()
-    if (options.structuredCreateError) {
-      throw options.structuredCreateError
+  const createStructuredSession = vi.fn(
+    async (args: Parameters<AgentLaunchSurfaceFactory['createStructuredSession']>[0]) => {
+      calls.push('createStructuredSession')
+      options.onStructuredCreate?.()
+      if (options.structuredCreateError) {
+        throw options.structuredCreateError
+      }
+      return {
+        sessionId: 'sess-1',
+        handle: 'handle_structured',
+        fence: 4,
+        ...(args.firstMessage && options.deliveredMessageId !== null
+          ? { firstMessage: { clientMessageId: 'msg-1' } }
+          : {})
+      }
     }
-    return { sessionId: 'sess-1', handle: 'handle_structured', fence: 4 }
-  })
+  )
   const createTerminalAgent = vi.fn(async (args: { startupPrompt?: string }) => {
     calls.push('createTerminalAgent')
     if (options.terminalCreateError) {
       throw options.terminalCreateError
     }
     return { handle: 'term_1', ...carried(args.startupPrompt) }
-  })
-  const deliverStructuredPrompt = vi.fn(async () => {
-    calls.push('deliverStructuredPrompt')
-    options.onStructuredPromptDelivery?.()
-    return options.deliveredMessageId === undefined ? 'msg-1' : options.deliveredMessageId
   })
   const deliverTerminalPrompt = vi.fn(async () => {
     calls.push('deliverTerminalPrompt')
@@ -101,7 +105,6 @@ export function harness(options: {
     createRecoveryShell,
     createStructuredSession,
     createTerminalAgent,
-    deliverStructuredPrompt,
     deliverTerminalPrompt,
     run: (intent: AgentLaunchIntent) =>
       executeAgentLaunch({
@@ -111,7 +114,6 @@ export function harness(options: {
         surfaces: {
           createStructuredSession,
           createTerminalAgent,
-          deliverStructuredPrompt,
           deliverTerminalPrompt
         },
         workspaces: options.worktreeOnlyFactory

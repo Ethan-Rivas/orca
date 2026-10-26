@@ -25,7 +25,9 @@ export async function createDesktopTerminal(
   }
   opts = applyRemoteViewerLaunchEnv(opts, opts.terminalImageViewerSupported)
   runtime.assertGraphReady()
-  const win = runtime.getAuthoritativeWindow(NO_WORKSPACE_OR_WINDOW_MESSAGE)
+  const rendererWebContents = runtime.getAuthoritativeWindow(
+    NO_WORKSPACE_OR_WINDOW_MESSAGE
+  ).webContents
   const requestId = dependencies.randomUUID()
   const reply = await new Promise<{ tabId: string; title: string }>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -41,7 +43,7 @@ export async function createDesktopTerminal(
         error?: string
       }
     ): void => {
-      if (event.sender !== win.webContents || response.requestId !== requestId) {
+      if (event.sender !== rendererWebContents || response.requestId !== requestId) {
         return
       }
       clearTimeout(timer)
@@ -53,7 +55,7 @@ export async function createDesktopTerminal(
       }
     }
     dependencies.getRuntimeDesktopSurface().onIpc('terminal:tabCreateReply', handler)
-    win.webContents.send('terminal:requestTabCreate', {
+    rendererWebContents.send('terminal:requestTabCreate', {
       requestId,
       command: opts.command,
       cwd: opts.cwd,
