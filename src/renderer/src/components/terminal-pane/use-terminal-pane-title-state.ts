@@ -7,7 +7,7 @@ import {
 import { isTerminalSessionStateSaveFailure } from '../../../../shared/terminal-session-state-save-failure'
 import { AGENT_LAUNCH_PANE_REFUSED_CODE } from '../../../../shared/agent-launch-pane-verdict'
 import { appendPaneTerminalError, clearPaneTerminalError } from './terminal-error-accumulation'
-import { stripSshReconnectOwnedErrorLines } from './TerminalErrorToast'
+import { stripSshReconnectOwnedErrorLines } from './terminal-ssh-reconnect-error'
 import { updateTerminalRemoteRuntimeRecoveryUiState } from './terminal-remote-runtime-recovery-ui-state'
 import type { PtyTransportRecoveryState } from './pty-transport-types'
 import type { TerminalPaneFoundation } from './use-terminal-pane-foundation'

@@ -21,12 +21,8 @@ import {
   describeSshSignInRequiredTerminalError,
   isSshSignInRequiredTerminalError
 } from './terminal-ssh-sign-in-error'
+import { isSshReconnectOwnedTerminalError } from './terminal-ssh-reconnect-error'
 
-const SSH_PREFIX = 'SSH connection is not active'
-// Produced by pty-connection.ts reportError() when a PTY reattach can't reach its SSH host.
-const SSH_CONNECT_FAILURE_PREFIX = 'SSH connection failed'
-// Matched with includes(): this arrives IPC-wrapped ("Error invoking remote method 'pty:…': Error: …").
-const SSH_RELAY_LOST_MARKER = 'SSH connection lost, reconnecting'
 const STALE_NODE_PTY_DAEMON_MARKERS = [
   "Daemon's node-pty install is gone",
   'node-pty: posix_spawn failed: ENOENT'
@@ -62,24 +58,6 @@ const SOURCE_RESTORE_REQUIRED = tokenPattern(
 // The pane's saved session is owned by another host connection, e.g. an older build's relay tab.
 const OWNER_HOST_MISMATCH = tokenPattern('terminal_pane_owner_host_mismatch')
 
-/** A single error line the SSH reconnect banner already covers — hide instead of stacking under/over it. */
-export function isSshReconnectOwnedTerminalError(error: string): boolean {
-  return (
-    error.startsWith(SSH_CONNECT_FAILURE_PREFIX) ||
-    error.startsWith(SSH_PREFIX) ||
-    error.includes(SSH_RELAY_LOST_MARKER)
-  )
-}
-
-// Error messages are newline-joined for display, so keep unrelated lines regardless of order.
-export function stripSshReconnectOwnedErrorLines(error: string): string | null {
-  const kept = error
-    .split('\n')
-    .filter((line) => !isSshReconnectOwnedTerminalError(line))
-    .join('\n')
-  return kept.length > 0 ? kept : null
-}
-
 export function shouldOfferDaemonRestart(error: string): boolean {
   return [STALE_NODE_PTY_DAEMON_MARKERS, STALE_DAEMON_CWD_MARKERS].some((markers) =>
     markers.every((marker) => error.includes(marker))
@@ -102,6 +80,11 @@ export function isExplainedTerminalError(error: string): boolean {
           ...UNREATTACHABLE_SESSIONS
         ].some((pattern) => pattern.match.test(line))
     )
+}
+
+/** The host no longer has this pane's terminal, so nothing can come back into it. */
+export function isRemoteTerminalClosedError(error: string): boolean {
+  return error.includes(REMOTE_TERMINAL_CLOSED_MARKER)
 }
 
 export function isPaneOwnerUnverifiedError(error: string): boolean {
@@ -231,7 +214,8 @@ export function TerminalErrorToast({
   onRestartDaemon,
   onRetry,
   onStartOnActiveAccount,
-  onOpenNewTerminal
+  onOpenNewTerminal,
+  onClosePane
 }: {
   error: string
   agentId?: string | null
@@ -243,6 +227,8 @@ export function TerminalErrorToast({
   onStartOnActiveAccount?: () => void
   /** Leaves this pane and its saved session untouched. */
   onOpenNewTerminal?: () => void
+  /** Dismissing only hides the toast; the dead pane needs a way out from where the user is looking (#21342). */
+  onClosePane?: () => void
 }): React.JSX.Element {
   const ssh = isSshHostStateTerminalError(error)
   // Why: the client's OS and shell describe neither the host nor its shell, and the renderer knows neither.
@@ -413,6 +399,14 @@ export function TerminalErrorToast({
             {translate(
               'auto.components.terminal.pane.TerminalErrorToast.openNewTerminal',
               'Open new terminal'
+            )}
+          </Button>
+        ) : null}
+        {onClosePane && isRemoteTerminalClosedError(error) ? (
+          <Button variant="outline" size="xs" onClick={onClosePane} className="ml-3">
+            {translate(
+              'auto.components.terminal.pane.TerminalContextMenu.8c17d6786d',
+              'Close Pane'
             )}
           </Button>
         ) : null}
