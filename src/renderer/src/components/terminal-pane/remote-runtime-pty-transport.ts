@@ -1,13 +1,11 @@
 import { parseTerminalAttachmentLaunchResult } from '../../../../shared/terminal-attachment-launch-result'
-import {
-  terminalLaunchFacts,
-  agentProviderSessionForEnsure
-} from '../../../../shared/agent-session-resume'
+import { terminalLaunchFacts } from '../../../../shared/agent-session-resume'
 import { isRuntimeCompatBlockError } from '@/runtime/runtime-protocol-compat'
 import { runtimeEnvironmentSupportsCapability } from '@/runtime/runtime-rpc-client'
 import { readTerminalSpawnDeferral } from '../../../../shared/host-spawn-admission'
 import { remoteRestoreSpawnIntentParams } from '../../runtime/remote-restore-spawn-intent'
 import { createAgentSessionLaunchOptions } from '@/runtime/agent-session-launch-options'
+import { agentProviderSessionForHostEnsure } from '@/runtime/agent-session-ensure-provider-session'
 import { createRemoteRuntimeDisconnectedInputGrace } from './remote-runtime-disconnected-input-grace'
 import {
   createRemoteRuntimeRecoveryInputHold,
@@ -3521,10 +3519,16 @@ export function createRemoteRuntimePtyTransport(
           createEnvironmentId,
           launchConfigToSend
         )
+        const ensureProviderSession = resumeProviderSessionToSend
+          ? await agentProviderSessionForHostEnsure(
+              createEnvironmentId,
+              resumeProviderSessionToSend
+            )
+          : undefined
         return createWithUnknownOutcomeRecovery(
           'agent-session',
           (timeoutMs) =>
-            resumeProviderSessionToSend
+            ensureProviderSession
               ? callRuntimeForEnvironment<RuntimeEnsureAgentSessionResult>(
                   createEnvironmentId,
                   'terminal.ensureAgentSession',
@@ -3534,7 +3538,7 @@ export function createRemoteRuntimePtyTransport(
                     ...originOptions,
                     worktree: toRuntimeTerminalWorktreeSelector(worktreeId),
                     agent: launchAgentToSend!,
-                    providerSession: agentProviderSessionForEnsure(resumeProviderSessionToSend),
+                    providerSession: ensureProviderSession,
                     ...(launchConfigToSend?.ompResumeFilePath
                       ? { ompResumeFilePath: launchConfigToSend.ompResumeFilePath }
                       : {}),
