@@ -15,8 +15,6 @@ import { RepositoryWorktreeDefaultsSection } from './repository/execution/Reposi
 type RepositoryProjectSettingsSectionsProps = {
   repo: Repo
   selectedProjectSetupId?: string
-  settingsSelectionKey?: string
-  settingsEntryRepoIds?: ReadonlySet<string>
   forceVisible: boolean
   searchQuery: string
   hostSetupEntries: SettingsSearchEntry[]
@@ -41,8 +39,6 @@ type RepositoryProjectSettingsSectionsProps = {
 export function RepositoryProjectSettingsSections({
   repo,
   selectedProjectSetupId,
-  settingsSelectionKey,
-  settingsEntryRepoIds,
   forceVisible,
   searchQuery,
   hostSetupEntries,
@@ -64,8 +60,6 @@ export function RepositoryProjectSettingsSections({
       <RepositoryHostSetupsSection
         repo={repo}
         selectedProjectSetupId={selectedProjectSetupId}
-        settingsSelectionKey={settingsSelectionKey}
-        settingsEntryRepoIds={settingsEntryRepoIds}
         forceVisible={forceVisible}
         searchQuery={searchQuery}
         searchEntries={hostSetupEntries}

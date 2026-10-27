@@ -21,7 +21,11 @@ import {
 
 type AgentHookHandlerDependencies = {
   getPtyIdForPaneKey?: (paneKey: string) => string | undefined
-  getPersistedTerminalLayouts?: PinnedClaudePaneLookup['getPersistedTerminalLayouts']
+  workspaceSession?: {
+    getWorkspaceSession: () => {
+      terminalLayoutsByTabId?: ReturnType<PinnedClaudePaneLookup['getPersistedTerminalLayouts']>
+    }
+  }
 }
 
 // Startup auto-installs hooks; renderer removal would misleadingly revert on the next launch.
@@ -45,7 +49,8 @@ export function registerAgentHookHandlers(
   })
   const pinnedPaneLookup: PinnedClaudePaneLookup = {
     getLivePtyIdForPaneKey: (paneKey) => dependencies.getPtyIdForPaneKey?.(paneKey),
-    getPersistedTerminalLayouts: () => dependencies.getPersistedTerminalLayouts?.()
+    getPersistedTerminalLayouts: () =>
+      dependencies.workspaceSession?.getWorkspaceSession().terminalLayoutsByTabId
   }
   ipcMain.handle('agentStatus:getSnapshot', (): AgentStatusIpcPayload[] => {
     // Pull after workspace hydration to replay enriched statuses without losing startup rows.
