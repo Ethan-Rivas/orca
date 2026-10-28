@@ -5,7 +5,6 @@ import TerminalSearch from '@/components/TerminalSearch'
 import { DaemonActionDialog } from '@/components/shared/useDaemonActions'
 import { AgentSessionContinuationDialog } from '@/components/agent-session-continuation/AgentSessionContinuationDialog'
 import { WORKSPACE_FILE_PATH_MIME, WORKSPACE_FILE_PATHS_MIME } from '@/lib/workspace-file-drag'
-import { startPaneOnActiveClaudeAccount } from './start-pane-on-active-claude-account'
 import CloseTerminalDialog from './CloseTerminalDialog'
 import TerminalContextMenu from './TerminalContextMenu'
 import TerminalPaneHeaderOverlay from './TerminalPaneHeaderOverlay'
@@ -32,6 +31,7 @@ import { canCloseTerminalPane, terminalPaneCloseLabel } from './terminal-pane-cl
 import { useAppStore } from '@/store'
 import { getKnownExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
+import { useWslHostStartCardReplacesPaneError } from './use-wsl-host-stopped-pane'
 
 export function TerminalPaneSurface({
   controller
@@ -97,7 +97,7 @@ export function TerminalPaneSurface({
     renameInputRef,
     renameValue,
     renamingPaneId,
-    restartPaneWithStartup,
+    startPaneOnActiveAccount,
     saveQuickCommand,
     searchOpen,
     searchStateRef,
@@ -127,6 +127,12 @@ export function TerminalPaneSurface({
   // Why: an SSH, runtime, or not-yet-known host must not be described with this client's OS/shell.
   const paneOnClient = useAppStore(
     (state) => getKnownExecutionHostIdForWorktree(state, worktreeId) === LOCAL_EXECUTION_HOST_ID
+  )
+  const errorReplacedByStartCard = useWslHostStartCardReplacesPaneError(
+    worktreeId,
+    activePane
+      ? (paneTransportsRef.current.get(activePane.id)?.getRuntimeEnvironmentId?.() ?? null)
+      : undefined
   )
 
   return (
@@ -197,8 +203,12 @@ export function TerminalPaneSurface({
         pane={activePane}
         tabId={tabId}
       />
-      {/* Let SSH recovery own its strip instead of covering it with the raw connection-error toast. */}
-      {visibleTerminalError && isActive && !showSshReconnectOverlay && activePane
+      {/* Let SSH recovery and a stopped WSL distro's Start own the pane instead of the raw error toast. */}
+      {visibleTerminalError &&
+      isActive &&
+      !showSshReconnectOverlay &&
+      !errorReplacedByStartCard &&
+      activePane
         ? createPortal(
             <TerminalErrorToast
               error={visibleTerminalError}
@@ -206,14 +216,7 @@ export function TerminalPaneSurface({
               paneOnClient={paneOnClient}
               onDismiss={dismissTerminalError}
               onRestartDaemon={() => daemonActions.setPending('restart')}
-              onStartOnActiveAccount={() =>
-                startPaneOnActiveClaudeAccount({
-                  paneId: activePane.id,
-                  paneHost: paneTransportsRef,
-                  worktreeId,
-                  restartPane: restartPaneWithStartup
-                })
-              }
+              onStartOnActiveAccount={() => startPaneOnActiveAccount(activePane.id)}
               onRetry={
                 isPaneOwnerRecoveryError(visibleTerminalError)
                   ? () =>

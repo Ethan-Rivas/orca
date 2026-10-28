@@ -21,10 +21,10 @@ export function validateFederatedWorkerStartPlacement(
   params: WorkerStartInput,
   createsWorktree: boolean
 ): void {
-  if (createsWorktree && (!params.name || !params.repo)) {
+  if (createsWorktree && !params.repo) {
     throw new OrchestrationError(
       'invalid_argument',
-      'Remote new-top-level requires --name and an explicit --repo from remote discovery.'
+      'Remote new-top-level requires an explicit --repo from remote discovery.'
     )
   }
   if (createsWorktree && params.terminal) {
@@ -79,9 +79,6 @@ export function prepareLocalWorkerStart(args: {
   }
   if (params.account && params.agent !== 'claude') {
     throw new OrchestrationError('invalid_argument', '--account applies only to --agent claude.')
-  }
-  if (createsWorktree && !params.name) {
-    throw new OrchestrationError('invalid_argument', 'New worktrees require --name.')
   }
   if (!createsWorktree && (params.name || params.repo || params.baseBranch || params.setup)) {
     throw new OrchestrationError(
@@ -141,10 +138,10 @@ export function prepareFederationAttachmentWorkerStart(args: {
 }): { agent: TuiAgent | undefined; launch: WorkerStartLaunch } {
   const { params, createsWorktree, runtime } = args
   assertWorkerLaunchPreferencesCreateTerminal(params)
-  if (createsWorktree && (!params.name || !params.repo)) {
+  if (createsWorktree && !params.repo) {
     throw new OrchestrationError(
       'invalid_argument',
-      'A remote new-top-level worktree requires --name and an explicit --repo.'
+      'A remote new-top-level worktree requires an explicit --repo.'
     )
   }
   if (createsWorktree && params.terminal) {
