@@ -2,8 +2,10 @@ import type { ClaudeRateLimitAccountsState } from '../../shared/managed-account-
 import { resolveClaudeLaunchAccount } from '../claude-accounts/claude-launch-account'
 import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
 import type { Repo } from '../../shared/repo-types'
+import type { LocalWindowsTerminalRuntimeOptions } from '../../shared/local-windows-terminal-runtime'
 import type { ClaudeAccountSelectionTarget } from '../claude-accounts/runtime-selection'
 import { getCodexSelectionTargetForPty } from '../ipc/pty/host-env/codex-home'
+import { newWorktreeLaunchScope } from './agent-launch-scope-runtime'
 import {
   resolveLocalProjectRuntimeForRepo,
   resolveLocalPtyOptions
@@ -46,20 +48,25 @@ export function resolveWorktreeStartupClaudeAccount(args: {
 }
 
 /** The account target the startup spawn will resolve, known before its worktree exists. */
-export function worktreeStartupClaudeAccountTarget(
-  store: Parameters<typeof resolveLocalProjectRuntimeForRepo>[0],
-  settings: Parameters<typeof resolveLocalPtyOptions>[0],
+export function worktreeStartupClaudeAccountTarget(args: {
+  store: Parameters<typeof resolveLocalProjectRuntimeForRepo>[0]
+  settings: Parameters<typeof resolveLocalPtyOptions>[0] &
+    Parameters<typeof newWorktreeLaunchScope>[1]
   repo: Repo
-): ClaudeAccountSelectionTarget {
-  const options = resolveLocalPtyOptions(
-    settings,
-    resolveLocalProjectRuntimeForRepo(store, repo),
-    undefined,
-    process.env.COMSPEC || 'powershell.exe'
-  )
+  /** The startup agent's planned PTY, which the spawn uses as is. */
+  plannedPty: LocalWindowsTerminalRuntimeOptions | undefined
+}): ClaudeAccountSelectionTarget {
+  const options =
+    args.plannedPty ??
+    resolveLocalPtyOptions(
+      args.settings,
+      resolveLocalProjectRuntimeForRepo(args.store, args.repo),
+      undefined,
+      process.env.COMSPEC || 'powershell.exe'
+    )
   return getCodexSelectionTargetForPty(
     options.shellOverride,
-    repo.path,
+    newWorktreeLaunchScope(args.repo, args.settings).path,
     options.terminalWindowsWslDistro ?? null
   )
 }

@@ -109,7 +109,13 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
     const startupClaudeAccountId = await this.resolveStartupClaudeAccount(
       args,
       createRoute.kind,
-      () => worktreeStartupClaudeAccountTarget(store, createSettings, repo)
+      () =>
+        worktreeStartupClaudeAccountTarget({
+          store,
+          settings: createSettings,
+          repo,
+          plannedPty: startupLaunchRuntime instanceof Error ? undefined : startupLaunchRuntime?.pty
+        })
     )
     if (isFolderRepo(repo)) {
       // A folder workspace is a registration, not a filesystem create, so it is host-agnostic.
