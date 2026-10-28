@@ -1,6 +1,13 @@
 import type { ClaudeRateLimitAccountsState } from '../../shared/managed-account-types'
 import { resolveClaudeLaunchAccount } from '../claude-accounts/claude-launch-account'
 import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
+import type { Repo } from '../../shared/repo-types'
+import type { ClaudeAccountSelectionTarget } from '../claude-accounts/runtime-selection'
+import { getCodexSelectionTargetForPty } from '../ipc/pty/host-env/codex-home'
+import {
+  resolveLocalProjectRuntimeForRepo,
+  resolveLocalPtyOptions
+} from '../local-project-runtime-resolution'
 
 /**
  * Resolves and validates a create's `--account` before anything is created on disk; the caller
@@ -36,4 +43,23 @@ export function resolveWorktreeStartupClaudeAccount(args: {
     throw new Error('This Orca runtime cannot start Claude --account terminals.')
   }
   return resolveClaudeLaunchAccount(args.listClaudeAccounts(), selector).accountId
+}
+
+/** The account target the startup spawn will resolve, known before its worktree exists. */
+export function worktreeStartupClaudeAccountTarget(
+  store: Parameters<typeof resolveLocalProjectRuntimeForRepo>[0],
+  settings: Parameters<typeof resolveLocalPtyOptions>[0],
+  repo: Repo
+): ClaudeAccountSelectionTarget {
+  const options = resolveLocalPtyOptions(
+    settings,
+    resolveLocalProjectRuntimeForRepo(store, repo),
+    undefined,
+    process.env.COMSPEC || 'powershell.exe'
+  )
+  return getCodexSelectionTargetForPty(
+    options.shellOverride,
+    repo.path,
+    options.terminalWindowsWslDistro ?? null
+  )
 }

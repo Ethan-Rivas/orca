@@ -36,7 +36,7 @@ type RuntimeInternals = {
   getAccountsSnapshot: () => unknown
 }
 
-function makeRuntime(prepareClaudeAuth: PrepareClaudeAuth): OrcaRuntimeService {
+function makeRuntime(prepareClaudeAuth: PrepareClaudeAuth | undefined): OrcaRuntimeService {
   const store = {
     getSettings: () => ({ disabledTuiAgents: [], workspaceDir: '/worktrees' }),
     getProjectHostSetups: () => []
@@ -94,6 +94,21 @@ describe('worktree create --account preflight', () => {
       })
     ).rejects.toThrow('stop after preflight')
     expect(prepare).toHaveBeenCalledWith({ runtime: 'host' }, { accountId: 'acct-b' })
+    expect(createLocalMock).toHaveBeenCalledOnce()
+  })
+
+  it('leaves the decision to the spawn when the runtime has no Claude preparer', async () => {
+    createLocalMock.mockReset().mockRejectedValue(new Error('stop after preflight'))
+    const runtime = makeRuntime(undefined)
+
+    await expect(
+      runtime.createManagedWorktree({
+        repoSelector: 'repo-1',
+        name: 'app',
+        startupAgent: 'claude',
+        startupClaudeAccount: 'pinned@example.com'
+      })
+    ).rejects.toThrow('stop after preflight')
     expect(createLocalMock).toHaveBeenCalledOnce()
   })
 })

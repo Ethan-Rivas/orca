@@ -26,6 +26,7 @@ import { resolveManagedWorktreeCreateStartup } from './managed-worktree-create-s
 import type { WorkspaceCreationHandle } from './workspace-lifecycle-creations'
 import { workspaceLifecycleKey } from './workspace-lifecycle-commands'
 import { getRepoExecutionHostId } from '../../../shared/execution-host'
+import { worktreeStartupClaudeAccountTarget } from '../runtime-worktree-startup-claude-account'
 
 export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
   protected abstract resolveLineageForWorktreeCreate(
@@ -105,7 +106,11 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
     )
     // Match IPC routing: executionHostId-only SSH repos must not create locally.
     const createRoute = resolveWorktreeCreateRoute(repo)
-    const startupClaudeAccountId = await this.resolveStartupClaudeAccount(args, createRoute.kind)
+    const startupClaudeAccountId = await this.resolveStartupClaudeAccount(
+      args,
+      createRoute.kind,
+      () => worktreeStartupClaudeAccountTarget(store, createSettings, repo)
+    )
     if (isFolderRepo(repo)) {
       // A folder workspace is a registration, not a filesystem create, so it is host-agnostic.
       return createRuntimeFolderWorktree({
