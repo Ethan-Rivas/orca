@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { translate } from '@/i18n/i18n'
 import { getAgentLabel } from '@/lib/agent-catalog'
 import { basename } from '@/lib/path'
@@ -22,7 +22,7 @@ export function TerminalTabHoverCard({
   agent: TerminalAgent | null
   shell: string | null | undefined
   icon: ReactNode
-  alert?: ReactNode
+  alert?: ComponentProps<typeof TabHoverCard>['alert']
   children: ReactNode
 }): React.JSX.Element {
   const { label: accountLabel, onTooltipOpenChange } = useClaudeTabAccountLabel(tab)

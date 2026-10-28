@@ -36,6 +36,7 @@ import { useCallback } from 'react'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
 import { useAppStore } from '@/store'
+import { isWorkspaceStatusAllowedOnHost } from '@/store/host-workspace-status-columns'
 import { settleComposerSubmit } from '@/lib/composer-submit-cancellation'
 import { runBackgroundWorktreeCreation } from '@/lib/worktree-creation-flow'
 import type { ComposerCreateHandoff } from '@/lib/composer-create-handoff'
@@ -44,10 +45,7 @@ import { resolveQuickCreateLinkedWorkItemPrompt } from '@/lib/linked-work-item-c
 import { buildQuickComposerStartup } from './quick-startup-plan'
 import { buildQuickCreationRequest, type QuickSubmitOptions } from './quick-creation-request'
 import type { PendingSmartGitHubSubmitResolution } from './source-selection-decisions'
-import { resolveAgentSessionLaunchRoute } from '@/lib/agent-session-launch-plan'
-import { launchChoiceSurface } from '@/lib/agent-menu-selection'
-import { findLaunchRepo, resolveLaunchClaudeAccountId } from '@/lib/claude-launch-account'
-import { chooseClaudeLaunchAccountIdForRepo } from '@/components/claude-account-prompt/choose-claude-launch-account'
+import { prepareQuickAgentLaunch } from './quick-creation-agent-launch'
 
 export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
   const {
@@ -129,9 +127,8 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       const { prompt: quickPrompt, draftPrompt: quickDraftPrompt } =
         resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
 
-      const composerClaudeAccountId =
-        agent === 'claude' ? await chooseClaudeLaunchAccountIdForRepo(repoId) : undefined
-      if (composerClaudeAccountId === null) {
+      const agentLaunch = await prepareQuickAgentLaunch(agent, repoId, options?.launchChoice)
+      if (!agentLaunch) {
         return
       }
 
@@ -148,10 +145,7 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
         shell: selectedRepoStartupShell,
         isRemote: selectedRepoIsRemote,
         telemetrySource,
-        claudeAccountId: resolveLaunchClaudeAccountId(
-          findLaunchRepo(useAppStore.getState(), { repoId }),
-          composerClaudeAccountId
-        )
+        claudeAccountId: agentLaunch.claudeAccountId
       })
 
       const startupPolicySettlement = await settleComposerSubmit(
@@ -190,25 +184,17 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
 
       const promptDelivery = quickDraftPrompt ? 'draft' : 'auto-submit'
       // Why: the verdict is persisted on the request as data and re-entered once the worktree exists.
-      const agentLaunchRoute = !agent
-        ? 'terminal-tui'
-        : resolveAgentSessionLaunchRoute(useAppStore.getState(), {
-            agent,
-            workspace: {
-              kind: selectedRepoIsGit ? 'git-worktree' : 'folder',
-              repoId,
-              executionHostId: ephemeralVmRecipe
-                ? 'runtime:pending-ephemeral-vm'
-                : (workspaceRunContext?.hostId ?? selectedRepoExecutionHostId ?? undefined)
-            },
-            prompt: quickDraftPrompt ?? quickPrompt,
-            promptDelivery,
-            claudeAccountId: composerClaudeAccountId,
-            // Why: the menu's pick stands, except that a pinned Claude account still needs a terminal.
-            ...(options?.launchChoice
-              ? { requestedSurface: launchChoiceSurface(options.launchChoice) }
-              : {})
-          })
+      const agentLaunchRoute = agentLaunch.resolveRoute({
+        workspace: {
+          kind: selectedRepoIsGit ? 'git-worktree' : 'folder',
+          repoId,
+          executionHostId: ephemeralVmRecipe
+            ? 'runtime:pending-ephemeral-vm'
+            : (workspaceRunContext?.hostId ?? selectedRepoExecutionHostId ?? undefined)
+        },
+        prompt: quickDraftPrompt ?? quickPrompt,
+        promptDelivery
+      })
       const structuredLaunch = agentLaunchRoute === 'structured-native-chat'
 
       const request = buildQuickCreationRequest({
@@ -241,7 +227,20 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
         branchNameOverride: effectiveBranchNameOverride,
         branchIntent,
         parentWorktreeId,
-        workspaceStatus: resolvedInitialWorkspaceStatus,
+        // A lane's host-only column applies only when creating on that host.
+        workspaceStatus:
+          resolvedInitialWorkspaceStatus &&
+          isWorkspaceStatusAllowedOnHost(
+            useAppStore.getState(),
+            {
+              hostId: workspaceRunContext?.hostId ?? selectedRepoExecutionHostId,
+              runtimeOwnerEnvironmentId:
+                selectedRepoTarget?.kind === 'environment' ? selectedRepoTarget.environmentId : null
+            },
+            resolvedInitialWorkspaceStatus
+          )
+            ? resolvedInitialWorkspaceStatus
+            : undefined,
         linkedGitLabMR,
         linkedGitLabIssue,
         includeGitLabLinks: smartGitHubResolution.kind === 'none',

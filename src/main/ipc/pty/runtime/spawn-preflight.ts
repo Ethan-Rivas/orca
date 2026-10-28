@@ -19,6 +19,7 @@ import {
   prepareRuntimeSpawnClaudeAuth,
   resolveRuntimeSpawnClaudeAccount
 } from './spawn-claude-account'
+import { localPtySpawnCwd } from '../host-env/spawn-cwd'
 import { resolvePtySpawnStartupTarget } from '../spawn-startup-target'
 import { resolvePtySpawnHostEnv } from '../spawn-host-env'
 import { ptySpawnPaneFromIds, stampPtySpawnPaneEnv } from '../spawn-pane-env'
@@ -33,7 +34,11 @@ export async function prepareRuntimePtySpawn(
 ): Promise<PtySpawnResult | null> {
   const args = ctx.args
   if (!ctx.preAdoptedStablePane) {
-    const admission = ctx.deps.assertWorkspaceAcceptsNewPty(args.worktreeId, args.sessionId)
+    const admission = ctx.deps.assertWorkspaceAcceptsNewPty(
+      args.worktreeId,
+      args.sessionId,
+      localPtySpawnCwd(args)
+    )
     if (admission) {
       await admission
     }

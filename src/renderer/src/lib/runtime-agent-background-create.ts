@@ -2,7 +2,7 @@ import { buildDefaultTerminalOptions } from '@/lib/pane-manager/pane-terminal-op
 import { createAgentSessionLaunchOptions } from '@/runtime/agent-session-launch-options'
 import type { SleepingAgentLaunchConfig } from '../../../shared/agent-session-resume'
 import type { StartupCommandDelivery } from '../../../shared/codex-startup-delivery'
-import type { SessionOptionValue } from '../../../shared/native-chat-session-options'
+import type { SessionOptionValue } from '../../../shared/native-chat/input/native-chat-session-options'
 import type { RuntimeTerminalCreate } from '../../../shared/runtime-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import {
