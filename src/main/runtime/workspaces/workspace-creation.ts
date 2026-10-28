@@ -105,7 +105,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
     )
     // Match IPC routing: executionHostId-only SSH repos must not create locally.
     const createRoute = resolveWorktreeCreateRoute(repo)
-    const startupClaudeAccountId = this.resolveStartupClaudeAccount(args, createRoute.kind)
+    const startupClaudeAccountId = await this.resolveStartupClaudeAccount(args, createRoute.kind)
     if (isFolderRepo(repo)) {
       // A folder workspace is a registration, not a filesystem create, so it is host-agnostic.
       return createRuntimeFolderWorktree({

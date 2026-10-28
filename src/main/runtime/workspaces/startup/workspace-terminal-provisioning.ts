@@ -8,6 +8,7 @@ import { prefetchWorktreeCreateBase } from '../../../worktree-create-base-prefet
 import { prepareWorktreeCreateForRepo } from '../../../worktree-create-preparation'
 import { getWorktreeCreatePrefetchGitOptions } from '../../../project-runtime-git-options'
 import { resolveWorktreeStartupClaudeAccount } from '../../runtime-worktree-startup-claude-account'
+import { preparePinnableClaudeAuth } from '../../../ipc/pty/claude-pinned-spawn'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
 import type { LayoutApplyReply } from '../../../../shared/workspace-layout/workspace-layout-command-types'
@@ -79,16 +80,21 @@ export abstract class OrcaRuntimeWithGetWorktreeTerminalProvisioningHost extends
     }
   }
 
-  protected resolveStartupClaudeAccount(
+  protected async resolveStartupClaudeAccount(
     request: Parameters<typeof resolveWorktreeStartupClaudeAccount>[0]['request'],
     createRouteKind: Parameters<typeof resolveWorktreeStartupClaudeAccount>[0]['createRouteKind']
-  ): string | undefined {
-    return resolveWorktreeStartupClaudeAccount({
+  ): Promise<string | undefined> {
+    const accountId = resolveWorktreeStartupClaudeAccount({
       request,
       createRouteKind,
       canSpawn: Boolean(this.ptyController?.spawn),
       listClaudeAccounts: () => this.getAccountsSnapshot().claude
     })
+    if (accountId) {
+      // Why before the checkout: a startup that fails to prepare is only a warning on a successful create.
+      await preparePinnableClaudeAuth(this.prepareClaudeAuth, { runtime: 'host' }, accountId)
+    }
+    return accountId
   }
 
   private getLayoutOwnerTerminalProvisioningHost(

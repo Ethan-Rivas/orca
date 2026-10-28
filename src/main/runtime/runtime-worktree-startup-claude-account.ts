@@ -3,9 +3,10 @@ import { resolveClaudeLaunchAccount } from '../claude-accounts/claude-launch-acc
 import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
 
 /**
- * Resolves and validates a create's `--account` before anything is created on disk.
+ * Resolves and validates a create's `--account` before anything is created on disk; the caller
+ * then prepares the account's folder, also before the checkout.
  *
- * Every refusal happens here because the startup terminal is spawned after the checkout exists,
+ * Refusals must come first because the startup terminal is spawned after the checkout exists,
  * and a failure there is only a warning on an otherwise successful create — a worktree whose
  * agent silently never started, or worse, started on the host's active account.
  */
