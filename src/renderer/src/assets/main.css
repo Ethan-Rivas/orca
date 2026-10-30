@@ -168,6 +168,12 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Why: only the drawer that carries it reads the live sidebar width; don't restyle its subtree per drag frame. */
+@property --workspace-sidebar-live-width {
+  syntax: '*';
+  inherits: false;
+}
+
 :root {
   --app-font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-sans: var(--app-font-family);
@@ -1896,6 +1902,30 @@ html.native-shell .app-layout {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Duration matches EDITOR_REVEAL_FLASH_MS; a fade only, so it stays under reduced motion. */
+.editor-reveal-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--terminal-pane-locate) 6%, transparent);
+  animation: editor-reveal-flash 1.2s ease-out forwards;
+}
+
+@keyframes editor-reveal-flash {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
   }
 }
 
