@@ -21,6 +21,14 @@ vi.mock('@/runtime/web-runtime-terminal-creation', () => ({
   createWebRuntimeAgentSessionTerminalWithLaunchDraft: vi.fn()
 }))
 
+vi.mock('@/components/settings/agent-launch-settings-transport', () => ({
+  hostSupportsLaunchChoices: vi.fn(async () => false)
+}))
+
+vi.mock('@/components/settings/use-host-agent-launch-preferences', () => ({
+  ensureAgentLaunchPreferences: vi.fn(async () => ({}))
+}))
+
 vi.mock('@/runtime/web-runtime-terminal-create-operation', () => ({
   createWebRuntimeSessionTerminalResult: mockCreateTerminal
 }))
@@ -39,11 +47,13 @@ async function launch(relaunch?: (claudeAccountId?: string) => void) {
     agent: 'claude',
     worktreeId: 'repo-1::/repo/wt',
     environmentId: 'env-1',
-    startupPlan: STARTUP_PLAN,
+    buildStartup: () => ({
+      startupPlan: STARTUP_PLAN,
+      pasteDraftAfterLaunch: null,
+      submitPastedPrompt: false
+    }),
     prompt: '',
     promptDelivery: 'auto-submit',
-    pastePromptAfterReady: null,
-    submitPastedPrompt: false,
     ...(relaunch ? { relaunch } : {})
   })
 }
@@ -75,8 +85,8 @@ it('explains a pinned refusal and offers to start on the active account', async 
   expect(relaunch).toHaveBeenCalledWith(ACTIVE_CLAUDE_ACCOUNT)
 })
 
-it('keeps the host message for an unrelated failure', async () => {
+it('shows the generic failure for an unrelated host error', async () => {
   mockCreateTerminal.mockResolvedValue({ outcome: { status: 'failed', message: 'host went away' } })
   await launch(vi.fn())
-  expect(mockToastError).toHaveBeenCalledWith('host went away')
+  expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining("Couldn't open a terminal"))
 })

@@ -132,10 +132,14 @@ describe('launchAgentInNewTab Claude account', () => {
       worktreeId: 'repo-1::/repo/wt',
       claudeAccountId: 'acct-2'
     })
-    expect(webLaunch().startupPlan.launchConfig.claudeAccountId).toBe('acct-2')
+    expect(webLaunch().buildStartup(undefined).startupPlan?.launchConfig.claudeAccountId).toBe(
+      'acct-2'
+    )
 
     webLaunch().relaunch!(ACTIVE_CLAUDE_ACCOUNT)
-    expect(webLaunch().startupPlan.launchConfig.claudeAccountId).toBe(ACTIVE_CLAUDE_ACCOUNT)
+    expect(webLaunch().buildStartup(undefined).startupPlan?.launchConfig.claudeAccountId).toBe(
+      ACTIVE_CLAUDE_ACCOUNT
+    )
     expect(mockCreateTab).not.toHaveBeenCalled()
   })
 })
