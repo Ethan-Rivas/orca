@@ -97,9 +97,7 @@ describe('worker-start --account', () => {
 
   it('downgrades a structured default to a terminal worker', () => {
     const settings = {
-      nativeChatProviders: EVERY_AGENT_CHAT,
-      openAgentTabsInChatByDefault: true,
-      experimentalStructuredNativeChat: true
+      nativeChatProviders: EVERY_AGENT_CHAT
     }
     expect(decideWorkerStartMode({ params: { agent: 'claude' }, settings }).mode).toBe('structured')
     const mode = decideWorkerStartMode({ params: { agent: 'claude', account: 'acct-b' }, settings })
