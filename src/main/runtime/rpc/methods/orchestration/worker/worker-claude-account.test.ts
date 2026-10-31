@@ -96,7 +96,9 @@ describe('worker-start --account', () => {
     const resumeAgentSessionInWorkspace = vi.fn(
       async (_worktreeId: string, _request: Record<string, unknown>) => ({
         ok: true as const,
-        handle: 'h'
+        handle: 'h',
+        paneKey: 'tab:leaf',
+        ptyId: 'pty-1'
       })
     )
     const session: WorkerResumeSession = {
@@ -104,10 +106,7 @@ describe('worker-start --account', () => {
       providerSession: { key: 'session_id', id: 's-1' },
       captureHostId: 'local'
     }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements the one method reopenWorkerTerminal calls.
-    const runtime = { resumeAgentSessionInWorkspace } as unknown as Parameters<
-      typeof reopenWorkerTerminal
-    >[0]
+    const runtime = { resumeAgentSessionInWorkspace }
     await reopenWorkerTerminal(runtime, 'wt-1', session, 'disp-1', 'acct-b')
     await reopenWorkerTerminal(runtime, 'wt-1', session, 'disp-2')
     expect(resumeAgentSessionInWorkspace.mock.calls.map(([, request]) => request)).toEqual([
