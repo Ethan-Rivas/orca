@@ -7,6 +7,8 @@ import { assertLocalAccountWorktree, prepareLocalWorkerStart } from './worker-st
 import { decideWorkerStartMode } from '../../orchestration-worker-start-mode'
 import { decideAgentLaunchMode } from '../../../../../agent-launch/agent-launch-mode'
 import { parseStartOptions } from './worker-earlier-work'
+import { reopenWorkerTerminal } from './worker-follow-up-placement'
+import type { WorkerResumeSession } from '../../../../orchestration/db/dispatch-context/worker-follow-up-lineage'
 
 function account(id: string, email: string): ClaudeManagedAccountSummary {
   return {
@@ -88,6 +90,30 @@ describe('worker-start --account', () => {
     expect(
       parseStartOptions(JSON.stringify({ agent: 'claude', launch: unpinned })).account
     ).toBeUndefined()
+  })
+
+  it('reopens a pinned worker conversation on its own account', async () => {
+    const resumeAgentSessionInWorkspace = vi.fn(
+      async (_worktreeId: string, _request: Record<string, unknown>) => ({
+        ok: true as const,
+        handle: 'h'
+      })
+    )
+    const session: WorkerResumeSession = {
+      agent: 'claude',
+      providerSession: { key: 'session_id', id: 's-1' },
+      captureHostId: 'local'
+    }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements the one method reopenWorkerTerminal calls.
+    const runtime = { resumeAgentSessionInWorkspace } as unknown as Parameters<
+      typeof reopenWorkerTerminal
+    >[0]
+    await reopenWorkerTerminal(runtime, 'wt-1', session, 'disp-1', 'acct-b')
+    await reopenWorkerTerminal(runtime, 'wt-1', session, 'disp-2')
+    expect(resumeAgentSessionInWorkspace.mock.calls.map(([, request]) => request)).toEqual([
+      expect.objectContaining({ mutationId: 'disp-1', claudeAccountId: 'acct-b' }),
+      expect.not.objectContaining({ claudeAccountId: expect.anything() })
+    ])
   })
 
   it('rejects non-Claude agents and unknown accounts before any dispatch exists', () => {

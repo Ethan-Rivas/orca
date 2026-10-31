@@ -91,8 +91,10 @@ export async function chooseWorkerFollowUpPlacement(
           delivery: 'reopened',
           worktreeId,
           agent: session.agent,
+          ...(options.account ? { account: options.account } : {}),
           earlierWork: earlierWork(db, latest),
-          reopen: (dispatchId) => reopenWorkerTerminal(runtime, worktreeId, session, dispatchId)
+          reopen: (dispatchId) =>
+            reopenWorkerTerminal(runtime, worktreeId, session, dispatchId, options.account)
         }
   }
   if (!options.agent) {
