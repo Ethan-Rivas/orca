@@ -6,6 +6,7 @@ import { createWorkerLaunchReceipt, withWorkerLaunchAccount } from './worker-lau
 import { assertLocalAccountWorktree, prepareLocalWorkerStart } from './worker-start-validation'
 import { decideWorkerStartMode } from '../../orchestration-worker-start-mode'
 import { decideAgentLaunchMode } from '../../../../../agent-launch/agent-launch-mode'
+import { parseStartOptions } from './worker-earlier-work'
 
 function account(id: string, email: string): ClaudeManagedAccountSummary {
   return {
@@ -77,6 +78,16 @@ describe('worker-start --account', () => {
     expect(
       prepare({ agent: 'claude', account: 'acct-a' }).launch.receipt.requested.account?.mode
     ).toBe('active')
+  })
+
+  it('restarts a fresh follow-up on the account the worker started with', () => {
+    const { launch } = prepare({ agent: 'claude', account: 'pinned@example.com' })
+    const startOptions = JSON.stringify({ agent: 'claude', launch: launch.receipt })
+    expect(parseStartOptions(startOptions)).toMatchObject({ agent: 'claude', account: 'acct-b' })
+    const unpinned = prepare({ agent: 'claude' }).launch.receipt
+    expect(
+      parseStartOptions(JSON.stringify({ agent: 'claude', launch: unpinned })).account
+    ).toBeUndefined()
   })
 
   it('rejects non-Claude agents and unknown accounts before any dispatch exists', () => {
