@@ -68,6 +68,7 @@ export type AgentSessionLaunchVerdict = {
   resumeFrom?: StructuredAgentSessionResumeSource
   onPromptDelivered?: () => void
   promptKeptByCaller?: true
+  draftFromScope?: string
   launchOptions?: Readonly<Record<string, string>>
 }
 
@@ -105,6 +106,7 @@ function structuredLaunchOptions(verdict: AgentSessionLaunchVerdict): Structured
     ...(verdict.resumeFrom ? { resumeFrom: verdict.resumeFrom } : {}),
     ...(verdict.onPromptDelivered ? { onPromptDelivered: verdict.onPromptDelivered } : {}),
     ...(verdict.promptKeptByCaller ? { promptKeptByCaller: true as const } : {}),
+    ...(verdict.draftFromScope ? { draftFromScope: verdict.draftFromScope } : {}),
     ...(verdict.executionHostId ? { executionHostId: verdict.executionHostId } : {}),
     ...(verdict.launchOptions ? { launchOptions: verdict.launchOptions } : {})
   }
