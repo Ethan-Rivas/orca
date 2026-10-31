@@ -1,10 +1,11 @@
+import { EVERY_AGENT_CHAT } from '../../shared/native-chat/every-agent-chat.test-fixture'
 import { vi } from 'vitest'
 import { executeAgentLaunch, type AgentLaunchExecution } from './agent-launch-executor'
 import type { AgentLaunchSurfaceFactory } from './agent-launch-surface-factories'
 import type { AgentLaunchIntent } from '../../shared/agent-launch-intent'
 
 export const STRUCTURED_PREFERENCE = {
-  experimentalNativeChat: true
+  nativeChatProviders: EVERY_AGENT_CHAT
 }
 
 /** A stub host for the executor, recording each runtime and factory call it receives. */

@@ -1,3 +1,4 @@
+import { EVERY_AGENT_CHAT } from '../../../../../../shared/native-chat/every-agent-chat.test-fixture'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClaudeManagedAccountSummary } from '../../../../../../shared/managed-account-types'
 import { WorkerStartParams } from '../../../../../../shared/rpc-contract/orchestration-worker-start-params'
@@ -96,7 +97,7 @@ describe('worker-start --account', () => {
 
   it('downgrades a structured default to a terminal worker', () => {
     const settings = {
-      experimentalNativeChat: true,
+      nativeChatProviders: EVERY_AGENT_CHAT,
       openAgentTabsInChatByDefault: true,
       experimentalStructuredNativeChat: true
     }

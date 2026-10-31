@@ -9,7 +9,7 @@ import type {
 import { RUNTIME_CAPABILITIES } from '../../shared/protocol-version'
 import { STRUCTURED_AGENT_RUNTIME_METADATA } from '../runtime/structured-agent-runtime-metadata'
 import {
-  isNativeChatDefaultFor,
+  nativeChatPreferenceFor,
   resolveStructuredNativeChatSupport,
   type NativeChatDefaultSettings,
   type StructuredNativeChatBlocker
@@ -42,7 +42,7 @@ export const DEFAULT_LAUNCH_VOCABULARY: AgentLaunchModeVocabulary = {
   terminal: 'a terminal agent'
 }
 
-export type AgentLaunchModeSettings = Partial<NativeChatDefaultSettings>
+export type AgentLaunchModeSettings = NativeChatDefaultSettings
 
 export type AgentLaunchModePlacement = {
   agent?: string
@@ -111,7 +111,7 @@ export function decideAgentLaunchMode(args: {
       agent,
       phase: 'before-effects'
     })
-  if (args.terminalOnly || (surface !== 'chat' && !isNativeChatDefaultFor(settings, agent))) {
+  if (args.terminalOnly || (surface !== 'chat' && !nativeChatPreferenceFor(settings, agent))) {
     return {
       mode: 'terminal',
       preferred: 'terminal',
@@ -314,13 +314,15 @@ export function warnStructuredLaunchDowngrade(
   }
 }
 
-/** A desktop stamp supplies the resolved preference; other callers read the host’s settings. */
+/** A desktop stamp supplies its resolved preference for the launched agent; other callers read the host’s settings. */
 export function readAgentLaunchModeSettings(
   runtime: { requireStore(): { getSettings(): AgentLaunchModeSettings | null } },
-  nativeChatDefault?: boolean
+  caller?: { agent?: string; nativeChatDefault?: boolean }
 ): AgentLaunchModeSettings | null {
-  if (nativeChatDefault !== undefined) {
-    return { experimentalNativeChat: nativeChatDefault }
+  if (caller?.nativeChatDefault !== undefined) {
+    return caller.agent === undefined
+      ? {}
+      : { nativeChatProviders: { [caller.agent]: caller.nativeChatDefault } }
   }
   try {
     return runtime.requireStore().getSettings()

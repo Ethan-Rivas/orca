@@ -1,3 +1,4 @@
+import { EVERY_AGENT_CHAT } from '../../shared/native-chat/every-agent-chat.test-fixture'
 import { describe, expect, it } from 'vitest'
 import { harness, STRUCTURED_PREFERENCE } from './agent-launch-executor.test-fixture'
 import { AgentLaunchStructuredSessionRefusedError } from './agent-launch-surface-factories'
@@ -705,7 +706,7 @@ describe('the surface is published as the launch stands, before its prompt is de
 describe('a new local worktree whose startup terminal did not come up', () => {
   it('opens its agent in the view a local workspace allows, as an existing one would', async () => {
     const h = harness({
-      settings: { experimentalNativeChat: true }
+      settings: { nativeChatProviders: EVERY_AGENT_CHAT }
     })
     h.createWorktree.mockImplementationOnce(async () => ({
       worktreeId: 'wt-new',
