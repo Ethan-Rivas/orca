@@ -7,8 +7,10 @@ import {
   attachClaudePinnedPtyPersistence,
   confirmSeededPinnedClaudePtys,
   createClaudePinnedPtyFilePersistence,
+  getClaudeAccountChoiceForPty,
   getPinnedClaudeAccountIdForPty,
   hasSeededUnconfirmedPinnedClaudePtys,
+  markClaudePtySpawnedOnActiveAccount,
   markPinnedClaudePtyExited,
   markPinnedClaudePtySpawned,
   readClaudePinnedPtyRegistryFile,
@@ -34,6 +36,28 @@ describe('Claude pinned PTY registry', () => {
 
     markPinnedClaudePtyExited('unpinned-pty')
     expect(write).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps an active-account choice across a restart without reporting it as pinned', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-pinned-pty-'))
+    try {
+      const filePath = join(dir, 'claude-pinned-pane-accounts.json')
+      const persistence = createClaudePinnedPtyFilePersistence(filePath)
+      const writes: Promise<void>[] = []
+      attachClaudePinnedPtyPersistence({
+        write: (entries) => void writes.push(persistence.write(entries) as Promise<void>)
+      })
+      markClaudePtySpawnedOnActiveAccount('pty-1')
+      await Promise.all(writes)
+
+      _internals.reset()
+      seedPinnedClaudePtysFromPersistence(await readClaudePinnedPtyRegistryFile(filePath))
+
+      expect(getClaudeAccountChoiceForPty('pty-1')).toBe('__active__')
+      expect(getPinnedClaudeAccountIdForPty('pty-1')).toBeUndefined()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('keeps restored PTYs the daemon still runs and drops the rest', () => {

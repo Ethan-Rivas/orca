@@ -76,9 +76,13 @@ export async function prepareRuntimeSpawnClaudeAuth(
 
 export function markRuntimeClaudePtySpawned(
   pty: { id: string; isReattach?: boolean },
-  claudeAuth: RuntimePtySpawnState['claudeAuth']
+  ctx: RuntimePtySpawnState
 ): void {
-  markClaudePtySpawnedForAuth(pty, claudeAuth)
+  markClaudePtySpawnedForAuth(
+    pty,
+    ctx.claudeAuth,
+    ctx.args.claudeAccountId ?? ctx.args.launchConfigClaudeAccountId
+  )
 }
 
 /** Skips pinned panes: the routed pointer would send their `claude` back to the selected account. */

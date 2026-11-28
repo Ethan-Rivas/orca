@@ -3,7 +3,7 @@ import { retireReplacedPaneBinding } from '../../../ipc/pty/pane/pane-owner-repl
 import { makePaneKey, parsePaneKey } from '../../../../shared/workspace-layout/stable-pane-id'
 import { isRemoteRuntimePtyId } from '../../../../shared/remote-runtime/remote-runtime-pty-id'
 import { heldLaunchConfig } from '../../terminal/launch/launch-evidence'
-import { getPinnedClaudeAccountIdForPty } from '../../../claude-accounts/claude-pinned-pty-registry'
+import { getClaudeAccountChoiceForPty } from '../../../claude-accounts/claude-pinned-pty-registry'
 import { isPinnableClaudeAccountId } from '../../../../shared/claude/project-claude-account-preference'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host/execution-host'
 import { replacedPaneBindingState } from '../../../persistence/loading-store/terminal-bindings/replaced-pane-binding'
@@ -73,7 +73,7 @@ export abstract class OrcaRuntimeWithRestartAgentPaneInPlace extends OrcaRuntime
       const claudeAccountId =
         session.agent === 'claude'
           ? (heldLaunchConfig(pty, session.agent)?.claudeAccountId ??
-            getPinnedClaudeAccountIdForPty(ptyId))
+            getClaudeAccountChoiceForPty(ptyId))
           : undefined
       // Resolved before the stop, so nothing after it can leave the pane without its agent.
       const resume = await this.resolveTerminalWorkspaceLaunchScope(`id:${pty.worktreeId}`)

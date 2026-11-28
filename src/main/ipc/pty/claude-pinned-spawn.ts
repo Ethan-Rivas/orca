@@ -1,6 +1,10 @@
 import { isClaudeLaunchCommand } from './host-env/fresh-spawn-routing'
 import { claudePinnedLaunchError } from '../../../shared/claude/claude-pinned-launch-error'
-import { markPinnedClaudePtySpawned } from '../../claude-accounts/claude-pinned-pty-registry'
+import {
+  markClaudePtySpawnedOnActiveAccount,
+  markPinnedClaudePtySpawned
+} from '../../claude-accounts/claude-pinned-pty-registry'
+import { ACTIVE_CLAUDE_ACCOUNT } from '../../../shared/claude/project-claude-account-preference'
 import type { PrepareClaudeAuth } from './host-env/types'
 import type { ClaudeRuntimeAuthPreparation } from '../../claude-accounts/runtime-auth/runtime-auth-types'
 import type { ClaudeAccountSelectionTarget } from '../../claude-accounts/selection/runtime-selection'
@@ -59,9 +63,15 @@ export async function preparePinnableClaudeAuth(
 // Why skip reattaches: the running Claude keeps the account it started on, whatever this launch resolved.
 export function markClaudePtySpawnedForAuth(
   pty: { id: string; isReattach?: boolean },
-  claudeAuth: ClaudeRuntimeAuthPreparation | null
+  claudeAuth: ClaudeRuntimeAuthPreparation | null,
+  requestedAccountId?: unknown
 ): void {
-  if (claudeAuth?.pinnedAccountId && pty.isReattach !== true) {
+  if (pty.isReattach === true) {
+    return
+  }
+  if (claudeAuth?.pinnedAccountId) {
     markPinnedClaudePtySpawned(pty.id, claudeAuth.pinnedAccountId)
+  } else if (requestedAccountId === ACTIVE_CLAUDE_ACCOUNT) {
+    markClaudePtySpawnedOnActiveAccount(pty.id)
   }
 }

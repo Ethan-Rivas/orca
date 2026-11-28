@@ -1,6 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { writePluginFileAtomically } from '../plugins/installation/plugin-atomic-file-write'
+import { ACTIVE_CLAUDE_ACCOUNT } from '../../shared/claude/project-claude-account-preference'
 
 /**
  * Which `--account` Claude PTYs run on which managed account, for the tab and status labels.
@@ -21,7 +22,17 @@ export function attachClaudePinnedPtyPersistence(target: ClaudePinnedPtyPersiste
 }
 
 export function getPinnedClaudeAccountIdForPty(ptyId: string): string | undefined {
+  const accountId = accountIdByPtyId.get(ptyId)
+  return accountId === ACTIVE_CLAUDE_ACCOUNT ? undefined : accountId
+}
+
+/** The pinned account id, or ACTIVE_CLAUDE_ACCOUNT for a launch that chose the active account. */
+export function getClaudeAccountChoiceForPty(ptyId: string): string | undefined {
   return accountIdByPtyId.get(ptyId)
+}
+
+export function markClaudePtySpawnedOnActiveAccount(ptyId: string): void {
+  markPinnedClaudePtySpawned(ptyId, ACTIVE_CLAUDE_ACCOUNT)
 }
 
 export function markPinnedClaudePtySpawned(ptyId: string, accountId: string): void {

@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClaudeRuntimeAuthPreparation } from '../../claude-accounts/runtime-auth/runtime-auth-types'
 
 const mocks = vi.hoisted(() => ({
-  markPinnedClaudePtySpawned: vi.fn()
+  markPinnedClaudePtySpawned: vi.fn(),
+  markClaudePtySpawnedOnActiveAccount: vi.fn()
 }))
 
 vi.mock('../../claude-accounts/claude-pinned-pty-registry', () => ({
-  markPinnedClaudePtySpawned: mocks.markPinnedClaudePtySpawned
+  markPinnedClaudePtySpawned: mocks.markPinnedClaudePtySpawned,
+  markClaudePtySpawnedOnActiveAccount: mocks.markClaudePtySpawnedOnActiveAccount
 }))
 
 import {
@@ -110,6 +112,14 @@ describe('markClaudePtySpawnedForAuth', () => {
     markClaudePtySpawnedForAuth({ id: 'pty-3' }, null)
     expect(mocks.markPinnedClaudePtySpawned).toHaveBeenCalledTimes(1)
     expect(mocks.markPinnedClaudePtySpawned).toHaveBeenCalledWith('pty-1', 'acct-1')
+  })
+
+  it('records a launch that chose the active account, but not on a reattach', () => {
+    markClaudePtySpawnedForAuth({ id: 'pty-1' }, makeAuth(), '__active__')
+    markClaudePtySpawnedForAuth({ id: 'pty-2', isReattach: true }, makeAuth(), '__active__')
+    expect(mocks.markClaudePtySpawnedOnActiveAccount).toHaveBeenCalledTimes(1)
+    expect(mocks.markClaudePtySpawnedOnActiveAccount).toHaveBeenCalledWith('pty-1')
+    expect(mocks.markPinnedClaudePtySpawned).not.toHaveBeenCalled()
   })
 
   it('leaves a reattached PTY on the account it already runs on', () => {

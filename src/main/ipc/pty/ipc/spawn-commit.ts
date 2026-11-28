@@ -26,7 +26,7 @@ export async function commitPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawn
     const response = ipcSpawnResponse(ctx)
     // Why the refusal check: a refused resume starts a plain shell, not the pinned Claude.
     if (ctx.isClaudeLaunch && !ctx.stablePaneOwner && !resumeSpawnRefusal(ctx.resumeAdmission)) {
-      markClaudePtySpawnedForAuth(ctx.result, ctx.claudeAuth)
+      markClaudePtySpawnedForAuth(ctx.result, ctx.claudeAuth, args.launchConfig?.claudeAccountId)
     }
     const freshSpawn = ctx.result.isReattach !== true && ctx.stablePaneOwner === null
     return commitPtySpawn({
