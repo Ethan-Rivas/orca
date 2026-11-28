@@ -45,7 +45,7 @@ describe('Claude pinned PTY registry', () => {
       const persistence = createClaudePinnedPtyFilePersistence(filePath)
       const writes: Promise<void>[] = []
       attachClaudePinnedPtyPersistence({
-        write: (entries) => void writes.push(persistence.write(entries) as Promise<void>)
+        write: (entries) => void writes.push(Promise.resolve(persistence.write(entries)))
       })
       markClaudePtySpawnedOnActiveAccount('pty-1')
       await Promise.all(writes)

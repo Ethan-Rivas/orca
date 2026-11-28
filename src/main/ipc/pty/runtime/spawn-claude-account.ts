@@ -78,11 +78,7 @@ export function markRuntimeClaudePtySpawned(
   pty: { id: string; isReattach?: boolean },
   ctx: RuntimePtySpawnState
 ): void {
-  markClaudePtySpawnedForAuth(
-    pty,
-    ctx.claudeAuth,
-    ctx.args.claudeAccountId ?? ctx.args.launchConfigClaudeAccountId
-  )
+  markClaudePtySpawnedForAuth(pty, ctx.claudeAuth, ctx.args.launchConfigClaudeAccountId)
 }
 
 /** Skips pinned panes: the routed pointer would send their `claude` back to the selected account. */

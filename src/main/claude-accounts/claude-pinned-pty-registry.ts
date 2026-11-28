@@ -4,8 +4,8 @@ import { writePluginFileAtomically } from '../plugins/installation/plugin-atomic
 import { ACTIVE_CLAUDE_ACCOUNT } from '../../shared/claude/project-claude-account-preference'
 
 /**
- * Which `--account` Claude PTYs run on which managed account, for the tab and status labels.
- * Persisted so a pane that survives a restart keeps naming its account before it reattaches.
+ * Which managed account each pinned Claude PTY runs on, or ACTIVE_CLAUDE_ACCOUNT for one launched on
+ * the active account. Persisted so a restored pane keeps its label and restarts on the same choice.
  */
 const accountIdByPtyId = new Map<string, string>()
 // Why: restored at startup but not yet confirmed against the daemon, which drops the dead ones.
